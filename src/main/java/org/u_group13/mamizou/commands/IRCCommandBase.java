@@ -46,9 +46,15 @@ public abstract class IRCCommandBase implements Callable<Integer>
 		final StringWriter outStringWriter = new StringWriter(500);
 		final PrintWriter out = new PrintWriter(outStringWriter);
 
-		new CommandLine(new ExecutorHelper(new CommandContext(sender, channel)))
+		final int result = new CommandLine(new ExecutorHelper(new CommandContext(sender, channel)))
 				.setOut(out).setErr(out)
 				.execute(commandAndArgs);
+
+		if (result == -1)
+		{
+			channel.sendMessage("Unknown command");
+			return;
+		}
 
 		final String outputRaw = outStringWriter.toString();
 
@@ -65,7 +71,7 @@ public abstract class IRCCommandBase implements Callable<Integer>
 		sender.sendMessage("End command dump");
 	}
 
-	@CommandLine.Command(name = "executor", description = "Helper class for commands.", version = "1.0.0")
+	@CommandLine.Command(name = "executor", description = "Helper class for commands.")
 	public static class ExecutorHelper implements Callable<Integer>
 	{
 		public static final Map<String, Function<CommandContext, IRCCommandBase>> COMMAND_MAP = new HashMap<>();
@@ -85,7 +91,7 @@ public abstract class IRCCommandBase implements Callable<Integer>
 		@Override
 		public Integer call() throws Exception
 		{
-			return COMMAND_MAP.containsKey(command) ? new CommandLine(COMMAND_MAP.get(command).apply(context)).execute(arguments) : 10;
+			return COMMAND_MAP.containsKey(command) ? new CommandLine(COMMAND_MAP.get(command).apply(context)).execute(arguments) : -1;
 		}
 	}
 

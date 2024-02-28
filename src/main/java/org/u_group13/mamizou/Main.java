@@ -10,6 +10,8 @@ import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.interactions.commands.build.SubcommandData;
 import net.dv8tion.jda.api.requests.GatewayIntent;
+import net.dv8tion.jda.api.utils.MemberCachePolicy;
+import net.dv8tion.jda.api.utils.cache.CacheFlag;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.kitteh.irc.client.library.Client;
@@ -83,6 +85,8 @@ public class Main implements Callable<Integer>
 	@Override
 	public Integer call() throws Exception
 	{
+		instance = this;
+
 		LOGGER.info("Main call reached, got config path as: {}", configPath);
 		LOGGER.info("Parsing configuration file...");
 
@@ -93,28 +97,29 @@ public class Main implements Callable<Integer>
 		Signal.handle(new Signal("TERM"), Main::termHandler);
 
 		LOGGER.info("Setting up JDA...");
-		jda = JDABuilder.createLight(apiKey == null ? config.discordToken : new String(apiKey))
+		jda = JDABuilder.createDefault(apiKey == null ? config.discordToken : new String(apiKey))
 						.enableIntents(GatewayIntent.MESSAGE_CONTENT,
-						               GatewayIntent.GUILD_WEBHOOKS)
+						               GatewayIntent.GUILD_WEBHOOKS,
+						               GatewayIntent.GUILD_EMOJIS_AND_STICKERS)
 		                .disableIntents(GatewayIntent.AUTO_MODERATION_CONFIGURATION,
-		                                       GatewayIntent.GUILD_MODERATION,
-											   GatewayIntent.GUILD_VOICE_STATES,
-		                                       GatewayIntent.GUILD_EMOJIS_AND_STICKERS,
-		                                       GatewayIntent.GUILD_INVITES,
-		                                       GatewayIntent.GUILD_PRESENCES,
-		                                       GatewayIntent.GUILD_MESSAGE_REACTIONS,
-											   GatewayIntent.GUILD_MESSAGE_TYPING,
-		                                       GatewayIntent.DIRECT_MESSAGE_REACTIONS,
-		                                       GatewayIntent.DIRECT_MESSAGE_TYPING)
+                                        GatewayIntent.GUILD_MODERATION,
+								 	    GatewayIntent.GUILD_VOICE_STATES,
+                                        GatewayIntent.GUILD_INVITES,
+                                        GatewayIntent.GUILD_PRESENCES,
+                                        GatewayIntent.GUILD_MESSAGE_REACTIONS,
+									    GatewayIntent.GUILD_MESSAGE_TYPING,
+                                        GatewayIntent.DIRECT_MESSAGE_REACTIONS,
+                                        GatewayIntent.DIRECT_MESSAGE_TYPING)
+						.enableCache(CacheFlag.EMOJI)
+						.disableCache(CacheFlag.VOICE_STATE)
+						.setMemberCachePolicy(MemberCachePolicy.ONLINE)
 		                .addEventListeners(api, generic, message, new UserListenerDiscord())
 		                .setActivity(Activity.watching("IRC Channels"))
 		                .build();
 
-		LOGGER.info("Connection to Discord complete!");
-
-		LOGGER.info("Awaiting cache...");
+		LOGGER.info("Waiting for connection...");
 		jda.awaitReady();
-		LOGGER.info("Caching complete!");
+		LOGGER.info("Connection to Discord complete!");
 
 		registerCommands();
 
@@ -289,8 +294,8 @@ public class Main implements Callable<Integer>
 			case ECDSA:
 			{
 				final String keyString = new String(Files.readAllBytes(config.ircOptions.pathToCert))
-						.replace("-----BEGIN EC PRIVATE KEY-----", "")
-						.replace("-----END EC PRIVATE KEY-----", "")
+						.replace("-----BEGIN PRIVATE KEY-----", "")
+						.replace("-----END PRIVATE KEY-----", "")
 						.replace(System.lineSeparator(), "");
 				return new SaslEcdsaNist256PChallenge(ircClient, config.ircOptions.username, SaslEcdsaNist256PChallenge.getPrivateKey(keyString));
 			}

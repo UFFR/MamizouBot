@@ -1,18 +1,20 @@
 package org.u_group13.mamizou.util;
 
 import net.dv8tion.jda.api.events.guild.member.update.GuildMemberUpdateNicknameEvent;
+import org.eclipse.collections.api.factory.primitive.CharCharMaps;
+import org.eclipse.collections.api.map.primitive.CharCharMap;
+import org.eclipse.collections.api.map.primitive.MutableCharCharMap;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.kitteh.irc.client.library.element.User;
-import org.kitteh.irc.client.library.element.mode.ChannelMode;
 import org.kitteh.irc.client.library.element.mode.Mode;
 import org.kitteh.irc.client.library.element.mode.ModeStatus;
-import org.kitteh.irc.client.library.element.mode.UserMode;
 import org.kitteh.irc.client.library.event.channel.*;
 import org.kitteh.irc.client.library.event.user.UserModeEvent;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.StringJoiner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -26,9 +28,9 @@ public class StringUtil
 	public static final String IRC_CHANNEL_MODE_UPDATE = "Channel mode updated to **%s** by **%s**";
 	public static final String IRC_CHANNEL_KNOCK = "**%s** knocked";
 	public static final String IRC_CHANNEL_NOTICE = "**%s** sent notice: %s";
-	public static final String IRC_USER_PART = "**%s** has left (%s)";
 	public static final String IRC_USER_SENT_MESSAGE = "**<%s>** %s";
 	public static final String IRC_USER_JOINED = "**%s** has joined the channel";
+	public static final String IRC_USER_PARTED = "**%s** has left the channel (%s)";
 	public static final String IRC_USER_KICKED = "**%s** was kicked by **%s** (%s)";
 	public static final String IRC_USER_MODE_UPDATED = "**%s** mode updated to **%s**";
 	public static final String DISCORD_USER_NICK_CHANGED = "%s is now known as %s";
@@ -36,11 +38,6 @@ public class StringUtil
 	public static String getChannelTopicUpdateString(@NotNull ChannelTopicEvent event)
 	{
 		return String.format(IRC_CHANNEL_TOPIC_UPDATE, event.getNewTopic().getValue().orElse(""), event.getNewTopic().getSetter().orElse(null));
-	}
-
-	public static String getIrcUserPartString(@NotNull ChannelPartEvent event)
-	{
-		return String.format(IRC_USER_PART, event.getUser().getMessagingName(), event.getMessage());
 	}
 
 	public static String getIrcChannelModeUpdateString(@NotNull ChannelModeEvent event)
@@ -66,6 +63,11 @@ public class StringUtil
 	public static String getIrcUserJoinedString(@NotNull ChannelJoinEvent event)
 	{
 		return String.format(IRC_USER_JOINED, event.getUser().getMessagingName());
+	}
+
+	public static String getIrcUserPartedString(@NotNull ChannelPartEvent event)
+	{
+		return String.format(IRC_USER_PARTED, event.getUser().getMessagingName(), event.getChannel().getMessagingName());
 	}
 
 	public static String getIrcUserKickedString(@NotNull ChannelKickEvent event)
@@ -135,13 +137,19 @@ public class StringUtil
 		final StringBuilder combined = new StringBuilder(modes.size() + 2);
 		final StringBuilder added = new StringBuilder(modes.size());
 		final StringBuilder removed = new StringBuilder(modes.size());
+		final StringJoiner parameters = new StringJoiner(", ");
 		for (ModeStatus<? extends Mode> mode : modes)
+		{
 			(mode.getAction() == ModeStatus.Action.ADD ? added : removed).append(mode.getMode().getChar());
+			mode.getParameter().ifPresent(parameters::add);
+		}
 
 		if (added.length() > 0)
 			combined.append('+').append(added);
 		if (removed.length() > 0)
 			combined.append('-').append(removed);
+		if (parameters.length() > 0)
+			combined.append(' ').append(parameters);
 		return combined.toString();
 	}
 

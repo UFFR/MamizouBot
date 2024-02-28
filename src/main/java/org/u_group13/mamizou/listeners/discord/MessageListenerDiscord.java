@@ -3,6 +3,7 @@ package org.u_group13.mamizou.listeners.discord;
 import static org.u_group13.mamizou.Main.config;
 import static org.u_group13.mamizou.Main.helper;
 
+import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.events.guild.member.update.GuildMemberUpdateNicknameEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
@@ -44,7 +45,9 @@ public class MessageListenerDiscord extends ListenerAdapter
 					return;
 				}
 
-				optionalChannel.get().sendMessage(IRCCodes.getColoredNick(event.getOldNickname()) + " is now known as " + IRCCodes.getColoredNick(event.getNewNickname()));
+				optionalChannel.get().sendMessage(
+						String.format("%s is now known as %s", IRCCodes.getColoredNick(event.getOldNickname() == null ? event.getMember().getEffectiveName() : event.getOldNickname()
+						), IRCCodes.getColoredNick(event.getNewNickname() == null ? event.getMember().getEffectiveName() : event.getNewNickname())));
 			}
         });
 
@@ -61,6 +64,10 @@ public class MessageListenerDiscord extends ListenerAdapter
 				|| config.ignoredUsers.ignoredDiscordUsers.contains(event.getAuthor().getName()))
 			return;
 
+		final String messageContent = event.getMessage().getContentDisplay();
+		if (messageContent.isEmpty())
+			return;
+
 		final long discordChanID = event.getChannel().getIdLong();
 		if (helper.discordToIRCMapping.containsKey(discordChanID))
 		{
@@ -71,8 +78,7 @@ public class MessageListenerDiscord extends ListenerAdapter
 				final Channel ircChannel = optionalChannel.get();
 				final String name = event.getAuthor().getEffectiveName();
 				final String coloredNick = IRCCodes.getColoredNick(name);
-				ircChannel.sendMessage(coloredNick
-						                       + ' ' + event.getMessage().getContentRaw());
+				ircChannel.sendMessage(coloredNick + ' ' + messageContent);
 				for (Message.Attachment attachment : event.getMessage().getAttachments())
 					ircChannel.sendMessage(coloredNick + ' ' + attachment.getUrl());
 			} else

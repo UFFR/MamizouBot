@@ -36,18 +36,21 @@ public class GenericListenerIRC
 	}
 
 	@Handler
-	public void onUserPartChannel(@NotNull ChannelPartEvent event)
+	public void onUserPartChannelIRC(@NotNull ChannelPartEvent event)
 	{
-		LOGGER.debug("User {} left channel {}", event.getUser().getHost(), event.getChannel().getMessagingName());
+		final String channelName = event.getChannel().getMessagingName();
+		LOGGER.trace("User {} left channel {}", event.getUser().getMessagingName(), channelName);
+		if (helper.ignoredUsers.ignoredHosts.contains(event.getUser().getHost()))
+			return;
 
-		if (helper.ircToDiscordMapping.containsKey(event.getChannel().getMessagingName()))
+		if (helper.ircToDiscordMapping.containsKey(channelName))
 		{
-			final long discordChanID = helper.ircToDiscordMapping.get(event.getChannel().getMessagingName());
+			final long discordChanID = helper.ircToDiscordMapping.get(channelName);
 			final TextChannel textChannel = getJda().getTextChannelById(discordChanID);
 			if (textChannel != null)
-				textChannel.sendMessage(StringUtil.getIrcUserPartString(event)).queue();
+				textChannel.sendMessage(StringUtil.getIrcUserPartedString(event)).queue();
 			else
-				LOGGER.warn("IRC channel {} is mapped to {}, but JDA couldn't find!", event.getChannel(), discordChanID);
+				LOGGER.warn("Channel {} is mapped to {}, but JDA couldn't find!", channelName, discordChanID);
 		}
 	}
 

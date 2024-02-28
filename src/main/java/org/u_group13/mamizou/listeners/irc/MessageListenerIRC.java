@@ -24,13 +24,14 @@ public class MessageListenerIRC
 	@Handler
 	public void onUserJoinChannelIRC(@NotNull ChannelJoinEvent event)
 	{
-		LOGGER.trace("User {} joined channel {}", event.getUser(), event.getAffectedChannel());
-		if (event.getClient().isUser(event.getUser()) || config.ignoredUsers.ignoredHosts.contains(event.getUser().getHost()))
+		final String channelName = event.getChannel().getMessagingName();
+		LOGGER.trace("User {} joined channel {}", event.getUser().getMessagingName(), channelName);
+		if (event.getClient().isUser(event.getUser()) || helper.ignoredUsers.ignoredHosts.contains(event.getUser().getHost()))
 			return;
 
-		if (helper.ircToDiscordMapping.containsKey(event.getChannel().getMessagingName()))
+		if (helper.ircToDiscordMapping.containsKey(channelName))
 		{
-			final long discordChanID = helper.ircToDiscordMapping.get(event.getChannel().getMessagingName());
+			final long discordChanID = helper.ircToDiscordMapping.get(channelName);
 
 			final TextChannel textChannel = getJda().getTextChannelById(discordChanID);
 			if (textChannel != null)
