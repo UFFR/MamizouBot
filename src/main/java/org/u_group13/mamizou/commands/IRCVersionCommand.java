@@ -16,15 +16,15 @@ public class IRCVersionCommand extends IRCCommandBase
 	@Override
 	public Integer call() throws Exception
 	{
-		context.sender.sendMessage("MamizouBot VERSION:");
-		context.sender.sendMessage(StringUtil.VERSION);
-		context.sender.sendMessage("CREDITS:");
+		context.sender().sendMessage("MamizouBot VERSION:");
+		context.sender().sendMessage(StringUtil.VERSION);
+		context.sender().sendMessage("CREDITS:");
 		final String[] credits = StringUtil.getCreditsString().split("\n");
 
 		for (String c : credits)
-			context.sender.sendMessage(c);
+			context.sender().sendMessage(c);
 
-		context.sender.sendMessage("End VERSION");
+		context.sender().sendMessage("End VERSION");
 
 		return 0;
 	}

@@ -24,6 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.u_group13.mamizou.Main;
 import org.u_group13.mamizou.config.Config;
+import org.u_group13.mamizou.config.LinkRegistries;
 
 import java.util.HashMap;
 import java.util.List;
@@ -32,6 +33,7 @@ import java.util.Set;
 
 public class Helper
 {
+	// TODO Remake
 	private static final Logger LOGGER = LoggerFactory.getLogger(Helper.class);
 
 	public final MutableLongObjectMap<String> discordToIRCMapping;
@@ -44,6 +46,7 @@ public class Helper
 	public final MutableObjectLongMap<String> ircToDiscordUserCache = ObjectLongMaps.mutable.empty();
 	@Deprecated
 	public final MutableLongObjectMap<Pair<String, String>> userCache = LongObjectMaps.mutable.empty();
+	@Deprecated
 	public final MutableLongObjectMap<MutableLongObjectMap<Pair<String, String>>> discordUserCache = LongObjectMaps.mutable.empty();
 
 	public transient final MutableLongSet sentMessages = LongSets.mutable.empty().asSynchronized();
@@ -174,7 +177,7 @@ public class Helper
 				}
 			} else
 			{
-				final Member member = memberList.get(0);
+				final Member member = memberList.getFirst();
 				LOGGER.trace("Got member {} ({})", member.getUser().getName(), member.getId());
 				ircToDiscordUserCache.put(user, member.getIdLong());
 						userCache.put(member.getIdLong(), Tuples.pair(member.getEffectiveName(),

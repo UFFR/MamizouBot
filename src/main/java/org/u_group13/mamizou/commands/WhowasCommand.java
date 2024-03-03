@@ -5,6 +5,7 @@ import org.kitteh.irc.client.library.command.Command;
 import org.kitteh.irc.client.library.util.Sanity;
 import org.kitteh.irc.client.library.util.ToStringer;
 
+// FIXME
 public class WhowasCommand extends Command<WhowasCommand>
 {
 	private String server, target;

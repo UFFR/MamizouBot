@@ -1,9 +1,6 @@
 package org.u_group13.mamizou.util;
 
 import net.dv8tion.jda.api.events.guild.member.update.GuildMemberUpdateNicknameEvent;
-import org.eclipse.collections.api.factory.primitive.CharCharMaps;
-import org.eclipse.collections.api.map.primitive.CharCharMap;
-import org.eclipse.collections.api.map.primitive.MutableCharCharMap;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.kitteh.irc.client.library.element.User;
@@ -21,8 +18,9 @@ import java.util.regex.Pattern;
 public class StringUtil
 {
 //	private static final Logger LOGGER = LoggerFactory.getLogger(StringUtil.class);
-	public static final String VERSION = "0.1.0-SNAPSHOT";
+	public static final String VERSION = "0.3.0-SNAPSHOT";
 	public static final String SPLIT_REGEX = "[^\\s\"']+|\"([^\"]*)\"|'([^']*)'";
+	public static final String BUTTON_ID_REGEX = "(A|R)\\:\\w+";
 	public static final Pattern SPLIT_PATTERN = Pattern.compile(SPLIT_REGEX);
 	public static final String IRC_CHANNEL_TOPIC_UPDATE = "Channel topic updated to \"%s\" by **%s**";
 	public static final String IRC_CHANNEL_MODE_UPDATE = "Channel mode updated to **%s** by **%s**";
@@ -67,7 +65,7 @@ public class StringUtil
 
 	public static String getIrcUserPartedString(@NotNull ChannelPartEvent event)
 	{
-		return String.format(IRC_USER_PARTED, event.getUser().getMessagingName(), event.getChannel().getMessagingName());
+		return String.format(IRC_USER_PARTED, event.getUser().getMessagingName(), event.getMessage());
 	}
 
 	public static String getIrcUserKickedString(@NotNull ChannelKickEvent event)
@@ -89,14 +87,16 @@ public class StringUtil
 	@Contract(pure = true)
 	public static String getCreditsString()
 	{
-		return "This project was made possible by:\n" +
-				"- JDA (v5.0.0-beta.20) by Austin Keener (DV8FromTheWorld), Michael Ritter, Florian Spieß (MinnDevelopment), et al.\n" +
-				"- Discord-Webhooks (v0.8.4) by MinnDevelopment\n" +
-				"- Kitteh IRC Client Library (KICL) (v9.0.0) by Kitteh\n" +
-				"- Picocli (v4.7.5) by remkop\n" +
-				"- Logback (v1.4.14) by QOS.ch\n" +
-				"- Jackson (v2.16.0) by FasterXML, LLC\n" +
-				"- Eclipse Collections (v1.11.0) by the Eclipse Foundation\n";
+		return """
+				This project was made possible by:
+				- JDA (v5.0.0-beta.20) by Austin Keener (DV8FromTheWorld), Michael Ritter, Florian Spieß (MinnDevelopment), et al.
+				- Discord-Webhooks (v0.8.4) by Florian Spieß
+				- Kitteh IRC Client Library (KICL) (v9.0.0) by Kitteh
+				- Picocli (v4.7.5) by remkop
+				- Logback (v1.4.14) by QOS.ch
+				- Jackson (v2.16.0) by FasterXML, LLC
+				- Eclipse Collections (v1.11.0) by the Eclipse Foundation
+				""";
 	}
 
 	@NotNull
@@ -125,6 +125,9 @@ public class StringUtil
 		if (user.getServer().isPresent())
 			builder.append("Connected to server: ").append(user.getServer().get()).append('\n');
 
+		if (user.isStale())
+			builder.append("Warning! User cache is stale!");
+
 		builder.append("```");
 
 		return builder.toString();
@@ -134,7 +137,7 @@ public class StringUtil
 	@NotNull
 	public static String modesToString(@NotNull List<? extends ModeStatus<? extends Mode>> modes)
 	{
-		final StringBuilder combined = new StringBuilder(modes.size() + 2);
+		final StringBuilder combined = new StringBuilder(modes.size() * 2);
 		final StringBuilder added = new StringBuilder(modes.size());
 		final StringBuilder removed = new StringBuilder(modes.size());
 		final StringJoiner parameters = new StringJoiner(", ");
@@ -144,9 +147,9 @@ public class StringUtil
 			mode.getParameter().ifPresent(parameters::add);
 		}
 
-		if (added.length() > 0)
+		if (!added.isEmpty())
 			combined.append('+').append(added);
-		if (removed.length() > 0)
+		if (!removed.isEmpty())
 			combined.append('-').append(removed);
 		if (parameters.length() > 0)
 			combined.append(' ').append(parameters);

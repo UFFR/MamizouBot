@@ -25,10 +25,10 @@ public class DiscordWHOISCommand extends IRCCommandBase
 	@Override
 	public Integer call() throws Exception
 	{
-		if (Main.helper.ircToDiscordMapping.containsKey(context.channel.getMessagingName()))
+		if (Main.helper.ircToDiscordMapping.containsKey(context.channel().getMessagingName()))
 		{
-			context.channel.sendMessage("Looking for user \"" + member + "\"...");
-			final long chanID = Main.helper.ircToDiscordMapping.get(context.channel.getMessagingName());
+			context.channel().sendMessage("Looking for user \"" + member + "\"...");
+			final long chanID = Main.helper.ircToDiscordMapping.get(context.channel().getMessagingName());
 			final TextChannel textChannel = Main.getJda().getTextChannelById(chanID);
 			if (textChannel != null)
 			{
@@ -37,13 +37,13 @@ public class DiscordWHOISCommand extends IRCCommandBase
 				                                          .filter(m -> m.getEffectiveName().equalsIgnoreCase(member))
 				                                          .findFirst();
 				if (optionalMember.isPresent())
-					getWHOIS(optionalMember.get()).forEach(context.channel::sendMessage);
+					getWHOIS(optionalMember.get()).forEach(context.channel()::sendMessage);
 				else
-					context.channel.sendMessage("Couldn't find user.");
+					context.channel().sendMessage("Couldn't find user.");
 
 				return 0;
 			} else
-				context.channel.sendMessage("Channel not mapped!");
+				context.channel().sendMessage("Channel not mapped!");
 		}
 
 		return 1;

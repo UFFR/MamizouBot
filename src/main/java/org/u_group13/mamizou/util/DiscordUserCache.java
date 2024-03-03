@@ -1,14 +1,7 @@
 package org.u_group13.mamizou.util;
 
-import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.entities.Member;
-import org.eclipse.collections.api.factory.primitive.LongObjectMaps;
-import org.eclipse.collections.api.map.primitive.MutableLongObjectMap;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.u_group13.mamizou.Main;
 
 import java.util.Objects;
 

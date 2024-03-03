@@ -36,7 +36,7 @@ public class Config implements Serializable
 			NICKSERV,
 			PLAIN,
 			EXTERNAL,
-			ECDSA;
+			ECDSA
 		}
 
 		public String nickname = "IRC_Relay", username = "relaybot", realName = "Mamizou", password = "I-WAS-NOT-CONFIGURED", server = "example.com";

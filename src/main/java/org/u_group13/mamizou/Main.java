@@ -18,10 +18,7 @@ import org.kitteh.irc.client.library.Client;
 import org.kitteh.irc.client.library.feature.auth.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.u_group13.mamizou.commands.DiscordNamesCommand;
-import org.u_group13.mamizou.commands.DiscordWHOISCommand;
-import org.u_group13.mamizou.commands.IRCCommandBase;
-import org.u_group13.mamizou.commands.IRCVersionCommand;
+import org.u_group13.mamizou.commands.*;
 import org.u_group13.mamizou.config.Config;
 import org.u_group13.mamizou.listeners.discord.APIListenerDiscord;
 import org.u_group13.mamizou.listeners.discord.GenericListenerDiscord;
@@ -212,13 +209,13 @@ public class Main implements Callable<Integer>
 
 		jda.updateCommands().addCommands
 		(
-				Commands.slash("whois", "Perform a WHOIS check on a user in the IRC")
+				Commands.slash("whois", "Perform a WHOIS check on a user in the IRC.")
 						.addOption(OptionType.STRING, "user", "The user to check", true, true)
 						.setGuildOnly(true),
-				Commands.slash("whowas", "Perform a WHOWAS check on a user no longer in the IRC")
+				Commands.slash("whowas", "Perform a WHOWAS check on a user no longer in the IRC.")
 						.addOption(OptionType.STRING, "user", "The user to check", true)
 						.setGuildOnly(true),
-				Commands.slash("sslinfo", "Get SSL information on a user in the IRC")
+				Commands.slash("sslinfo", "Get SSL information on a user in the IRC.")
 						.addOption(OptionType.STRING, "user", "The user to check", true, true)
 						.setGuildOnly(true)
 						.setDefaultPermissions(DefaultMemberPermissions.DISABLED),
@@ -233,8 +230,16 @@ public class Main implements Callable<Integer>
 				        .setGuildOnly(true)
 				        .setDefaultPermissions(DefaultMemberPermissions.DISABLED),
 				Commands.slash("optout", "Opt out of being included in relay messages and WHOIS queries."),
-				Commands.slash("optin", "Opt in for being included in relay messages and WHOIS queries."),
+				Commands.slash("optin", "Opt in for being included in relay messages and WHOIS queries"),
 				Commands.slash("names", "Get a list of names in the IRC."),
+				Commands.slash("link", "Link with an IRC account.")
+						.addOption(OptionType.STRING, "user", "The user account to link with, must be online.")
+						.setGuildOnly(true),
+				Commands.slash("unlink", "Unlink from an IRC account.")
+						.setGuildOnly(true),
+				Commands.slash("reject", "Reject link requests.")
+						.addOption(OptionType.STRING, "user", "The user account to reject.")
+						.addOption(OptionType.BOOLEAN, "all", "Reject all requests."),
 				Commands.user("Is User in IRC?").setGuildOnly(true)
 		).queue();
 
@@ -244,6 +249,10 @@ public class Main implements Callable<Integer>
 		IRCCommandBase.ExecutorHelper.COMMAND_MAP.put("!whois", DiscordWHOISCommand::new);
 		IRCCommandBase.ExecutorHelper.COMMAND_MAP.put("!names", DiscordNamesCommand::new);
 		IRCCommandBase.ExecutorHelper.COMMAND_MAP.put("!version", IRCVersionCommand::new);
+		IRCCommandBase.ExecutorHelper.COMMAND_MAP.put("!accept", AcceptLinkCommand::new);
+		IRCCommandBase.ExecutorHelper.COMMAND_MAP.put("!reject", RejectLinkCommand::new);
+		IRCCommandBase.ExecutorHelper.COMMAND_MAP.put("!link", LinkCommand::new);
+		IRCCommandBase.ExecutorHelper.COMMAND_MAP.put("!unlink", UnlinkCommand::new);
 	}
 
 	public static Config getConfig()
@@ -285,23 +294,23 @@ public class Main implements Callable<Integer>
 	@Contract(value = " -> new", pure = true)
 	private static AuthProtocol getAuthProtocol() throws IOException, NoSuchAlgorithmException, InvalidKeySpecException
 	{
-		switch (config.ircOptions.authType)
+		return switch (config.ircOptions.authType)
 		{
-			case NICKSERV: return NickServ.builder(ircClient).account(config.ircOptions.username).password(
+			case NICKSERV -> NickServ.builder(ircClient).account(config.ircOptions.username).password(
 					config.ircOptions.password).build();
-			case PLAIN: return new SaslPlain(ircClient, config.ircOptions.username, config.ircOptions.password);
-			case EXTERNAL: return new SaslExternal(ircClient);
-			case ECDSA:
+			case PLAIN -> new SaslPlain(ircClient, config.ircOptions.username, config.ircOptions.password);
+			case EXTERNAL -> new SaslExternal(ircClient);
+			case ECDSA ->
 			{
 				final String keyString = new String(Files.readAllBytes(config.ircOptions.pathToCert))
 						.replace("-----BEGIN PRIVATE KEY-----", "")
 						.replace("-----END PRIVATE KEY-----", "")
 						.replace(System.lineSeparator(), "");
-				return new SaslEcdsaNist256PChallenge(ircClient, config.ircOptions.username, SaslEcdsaNist256PChallenge.getPrivateKey(keyString));
+				yield new SaslEcdsaNist256PChallenge(ircClient, config.ircOptions.username,
+				                                     SaslEcdsaNist256PChallenge.getPrivateKey(keyString));
 			}
-			default:
-				throw new IllegalStateException("Unexpected value: " + config.ircOptions.authType);
-		}
+			default -> throw new IllegalStateException("Unexpected value: " + config.ircOptions.authType);
+		};
 	}
 
 	private static void hangupHandler(Signal signal)

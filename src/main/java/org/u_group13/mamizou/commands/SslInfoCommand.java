@@ -5,6 +5,7 @@ import org.kitteh.irc.client.library.command.Command;
 import org.kitteh.irc.client.library.util.Sanity;
 import org.kitteh.irc.client.library.util.ToStringer;
 
+// FIXME
 public class SslInfoCommand extends Command<SslInfoCommand>
 {
 	private String server, target;

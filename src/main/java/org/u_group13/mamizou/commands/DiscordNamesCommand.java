@@ -7,7 +7,6 @@ import org.jetbrains.annotations.NotNull;
 import org.u_group13.mamizou.Main;
 import picocli.CommandLine;
 
-import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -17,7 +16,7 @@ public class DiscordNamesCommand extends IRCCommandBase
 {
 
 	@CommandLine.Option(names = "-e,--expression", description = "RegEx to filter names by")
-	private String regex;
+	private String regex = null;
 	@CommandLine.Option(names = "-n,--nicks", description = "If the list should be nicknames and not usernames")
 	private boolean nicks = false;
 
@@ -29,7 +28,7 @@ public class DiscordNamesCommand extends IRCCommandBase
 	@Override
 	public Integer call() throws Exception
 	{
-		final String ircChannel = context.channel.getMessagingName();
+		final String ircChannel = context.channel().getMessagingName();
 		if (Main.helper.ircToDiscordMapping.containsKey(ircChannel))
 		{
 			final long chanID = Main.helper.ircToDiscordMapping.get(ircChannel);
@@ -44,7 +43,7 @@ public class DiscordNamesCommand extends IRCCommandBase
 				if (regex != null)
 					names.removeIf(s -> !s.matches(regex));
 
-				context.sender.sendMessage("Begin NAMES:");
+				context.sender().sendMessage("Begin NAMES:");
 
 				final StringBuilder builder = new StringBuilder(names.size() * 5);
 
@@ -52,17 +51,18 @@ public class DiscordNamesCommand extends IRCCommandBase
 				{
 					if (builder.length() + name.length() >= 4096)
 					{
-						context.sender.sendMessage(builder.toString());
+						context.sender().sendMessage(builder.toString());
 						builder.delete(0, builder.length());
 					}
 
 					builder.append(name).append(", ");
 				}
 
-				context.sender.sendMessage("End of NAMES");
+				context.sender().sendMessage("End of NAMES");
 			} else
-				context.channel.sendMessage("Channel not mapped!");
-		}
+				context.channel().sendMessage("Channel mapped, but JDA couldn't find!");
+		} else
+			context.channel().sendMessage("Channel not mapped!");
 
 		return 0;
 	}

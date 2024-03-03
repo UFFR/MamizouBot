@@ -9,6 +9,7 @@ import picocli.CommandLine;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -16,17 +17,9 @@ import java.util.function.Function;
 
 public abstract class IRCCommandBase implements Callable<Integer>
 {
-	public static class CommandContext
-	{
-		public final User sender;
-		public final Channel channel;
-
-		public CommandContext(User sender, Channel channel)
+	public record CommandContext(User sender, Channel channel)
 		{
-			this.sender = sender;
-			this.channel = channel;
 		}
-	}
 
 	@NotNull
 	protected final CommandContext context;
@@ -38,17 +31,32 @@ public abstract class IRCCommandBase implements Callable<Integer>
 
 	public static void tryExecute(@NotNull ChannelMessageEvent event)
 	{
+		final int result;
 		final String rawCommand = event.getMessage();
 		final String[] commandAndArgs = StringUtil.splitStringArray(rawCommand);
+
+		final String command = commandAndArgs[0].toLowerCase();
 		final User sender = event.getActor();
 		final Channel channel = event.getChannel();
-
 		final StringWriter outStringWriter = new StringWriter(500);
-		final PrintWriter out = new PrintWriter(outStringWriter);
 
-		final int result = new CommandLine(new ExecutorHelper(new CommandContext(sender, channel)))
-				.setOut(out).setErr(out)
-				.execute(commandAndArgs);
+		if (ExecutorHelper.COMMAND_MAP.containsKey(command))
+		{
+			final String[] args;
+
+			args = commandAndArgs.length > 1 ? Arrays.copyOfRange(commandAndArgs, 1, commandAndArgs.length) : new String[0];
+
+			final PrintWriter out = new PrintWriter(outStringWriter);
+
+//		final int result = new CommandLine(new ExecutorHelper(new CommandContext(sender, channel)))
+//				.setOut(out).setErr(out)
+//				.execute(commandAndArgs);
+
+			result = new CommandLine(ExecutorHelper.COMMAND_MAP.get(command).apply(new CommandContext(sender, channel)))
+					.setOut(out).setErr(out)
+					.execute(args);
+		} else
+			result = -1;
 
 		if (result == -1)
 		{
@@ -57,6 +65,9 @@ public abstract class IRCCommandBase implements Callable<Integer>
 		}
 
 		final String outputRaw = outStringWriter.toString();
+
+		if (result != 0)
+			sender.sendMessage(String.format("Command exited with code %s", result));
 
 		if (outputRaw.isBlank())
 			return;
@@ -71,6 +82,7 @@ public abstract class IRCCommandBase implements Callable<Integer>
 		sender.sendMessage("End command dump");
 	}
 
+	@Deprecated
 	@CommandLine.Command(name = "executor", description = "Helper class for commands.")
 	public static class ExecutorHelper implements Callable<Integer>
 	{
