@@ -50,10 +50,6 @@ public abstract class IRCCommandBase implements Callable<Integer>
 
 			final PrintWriter out = new PrintWriter(outStringWriter);
 
-//		final int result = new CommandLine(new ExecutorHelper(new CommandContext(sender, channel)))
-//				.setOut(out).setErr(out)
-//				.execute(commandAndArgs);
-
 			result = new CommandLine(COMMAND_MAP.get(command).apply(new CommandContext(sender, channel)))
 					.setOut(out).setErr(out)
 					.execute(args);
@@ -83,29 +79,4 @@ public abstract class IRCCommandBase implements Callable<Integer>
 
 		sender.sendMessage("End command dump");
 	}
-
-	@Deprecated
-	@CommandLine.Command(name = "executor", description = "Helper class for commands.")
-	public static class ExecutorHelper implements Callable<Integer>
-	{
-
-		@CommandLine.Parameters(index = "0")
-		private String command;
-		@CommandLine.Parameters(index = "1..*", paramLabel = "ARG")
-		private String[] arguments = new String[0];
-		private final CommandContext context;
-
-		public ExecutorHelper(CommandContext context)
-		{
-			this.context = context;
-		}
-
-		@NotNull
-		@Override
-		public Integer call() throws Exception
-		{
-			return COMMAND_MAP.containsKey(command) ? new CommandLine(COMMAND_MAP.get(command).apply(context)).execute(arguments) : -1;
-		}
-	}
-
 }

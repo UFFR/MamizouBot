@@ -27,18 +27,22 @@ public class StringUtil
 	public static final String VERSION;// = "0.3.0-SNAPSHOT";
 	static
 	{
+		final String fallback = "0.3.1-SNAPSHOT";
 		String v;
 		try
 		{
+			LOGGER.info("Trying to get version from manifest...");
 			final URL resource = Main.class.getClassLoader().getResource("META-INF/MANIFEST.MF");
 			assert resource != null;
 			final Manifest manifest = new Manifest(resource.openStream());
 
 			v = manifest.getMainAttributes().getValue("Build-Version");
+			if (v == null)
+				v = fallback;
 		} catch (IOException e)
 		{
 			LOGGER.error("Death and hatred to mankind", e);
-			v = "0.3.0-SNAPSHOT";// Fallback
+			v = fallback;
 		}
 		VERSION = v;
 	}

@@ -50,7 +50,6 @@ public class UserListenerDiscord extends ListenerAdapter
 	public void onGuildMemberUpdateNickname(@NotNull GuildMemberUpdateNicknameEvent event)
 	{
 		LOGGER.debug("Member {} updated nickname from {} to {}", event.getMember().getId(), event.getOldNickname(), event.getNewNickname());
-		updateCache(event);
 
 		// Wack
 		LOGGER.trace("Updating all mapped channels");
@@ -74,15 +73,6 @@ public class UserListenerDiscord extends ListenerAdapter
 	public void onGuildMemberUpdateAvatar(@NotNull GuildMemberUpdateAvatarEvent event)
 	{
 		LOGGER.debug("Member {} updated effective avatar from {} to {}", event.getMember().getId(), event.getOldAvatarUrl(), event.getNewAvatarUrl());
-		updateCache(event);
 	}
 
-	@Deprecated
-	private static void updateCache(@NotNull GenericGuildMemberUpdateEvent<String> event)
-	{
-		LOGGER.debug("Updating cache for member {} in guild {}", event.getMember().getId(), event.getGuild().getId());
-		final long guildID = event.getGuild().getIdLong();
-		final long userID = event.getMember().getIdLong();
-		helper.offerUserCache(guildID, userID, event.getMember().getEffectiveName(), event.getNewValue());
-	}
 }
