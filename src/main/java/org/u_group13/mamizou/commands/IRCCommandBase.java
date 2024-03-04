@@ -17,6 +17,8 @@ import java.util.function.Function;
 
 public abstract class IRCCommandBase implements Callable<Integer>
 {
+	public static final Map<String, Function<CommandContext, IRCCommandBase>> COMMAND_MAP = new HashMap<>();
+
 	public record CommandContext(User sender, Channel channel)
 		{
 		}
@@ -40,7 +42,7 @@ public abstract class IRCCommandBase implements Callable<Integer>
 		final Channel channel = event.getChannel();
 		final StringWriter outStringWriter = new StringWriter(500);
 
-		if (ExecutorHelper.COMMAND_MAP.containsKey(command))
+		if (COMMAND_MAP.containsKey(command))
 		{
 			final String[] args;
 
@@ -52,7 +54,7 @@ public abstract class IRCCommandBase implements Callable<Integer>
 //				.setOut(out).setErr(out)
 //				.execute(commandAndArgs);
 
-			result = new CommandLine(ExecutorHelper.COMMAND_MAP.get(command).apply(new CommandContext(sender, channel)))
+			result = new CommandLine(COMMAND_MAP.get(command).apply(new CommandContext(sender, channel)))
 					.setOut(out).setErr(out)
 					.execute(args);
 		} else
@@ -86,7 +88,6 @@ public abstract class IRCCommandBase implements Callable<Integer>
 	@CommandLine.Command(name = "executor", description = "Helper class for commands.")
 	public static class ExecutorHelper implements Callable<Integer>
 	{
-		public static final Map<String, Function<CommandContext, IRCCommandBase>> COMMAND_MAP = new HashMap<>();
 
 		@CommandLine.Parameters(index = "0")
 		private String command;

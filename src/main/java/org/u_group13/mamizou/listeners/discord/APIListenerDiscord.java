@@ -74,7 +74,7 @@ public class APIListenerDiscord extends ListenerAdapter
 						}
 
 						LOGGER.trace("User was found");
-						event.getHook().sendMessage(StringUtil.getWHOIS(optionalUser.get())).queue();
+						event.getHook().sendMessage(StringUtil.getWHOIS(optionalUser.get(), channel)).queue();
 					} else
 					{
 						LOGGER.warn("Channel {} ({}) in mapping, but IRC mapped channel {} doesn't exist!",

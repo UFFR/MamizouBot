@@ -8,14 +8,8 @@ import net.dv8tion.jda.api.events.guild.member.update.GuildMemberUpdateAvatarEve
 import net.dv8tion.jda.api.events.guild.member.update.GuildMemberUpdateNicknameEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import org.jetbrains.annotations.NotNull;
-import org.kitteh.irc.client.library.element.Channel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.u_group13.mamizou.Main;
-import org.u_group13.mamizou.util.IRCCodes;
-import org.u_group13.mamizou.util.StringUtil;
-
-import java.util.Optional;
 
 public class UserListenerDiscord extends ListenerAdapter
 {
@@ -58,6 +52,7 @@ public class UserListenerDiscord extends ListenerAdapter
 		LOGGER.debug("Member {} updated nickname from {} to {}", event.getMember().getId(), event.getOldNickname(), event.getNewNickname());
 		updateCache(event);
 
+		// Wack
 		LOGGER.trace("Updating all mapped channels");
 		event.getUser()
 		     .getMutualGuilds()
@@ -67,7 +62,10 @@ public class UserListenerDiscord extends ListenerAdapter
 				.filter(helper.discordChannels::contains)
 				.mapToObj(helper.discordToIRCMapping::get)
 				.forEach(channelName -> getIrcClient().getChannel(channelName)
-				                                      .ifPresentOrElse(channel -> channel.sendMessage(StringUtil.getDiscordUserNickChanged(event)),
+				                                      .ifPresentOrElse(channel -> channel.sendMessage(
+						                                                       String.format("%s is now known as %s",
+						                                                                     event.getOldNickname(),
+						                                                                     event.getNewNickname())),
 				                                                       () -> LOGGER.warn("Channel {} mapped, but IRC client couldn't find!", channelName)));
 
 	}
@@ -79,6 +77,7 @@ public class UserListenerDiscord extends ListenerAdapter
 		updateCache(event);
 	}
 
+	@Deprecated
 	private static void updateCache(@NotNull GenericGuildMemberUpdateEvent<String> event)
 	{
 		LOGGER.debug("Updating cache for member {} in guild {}", event.getMember().getId(), event.getGuild().getId());

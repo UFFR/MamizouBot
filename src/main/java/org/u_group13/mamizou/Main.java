@@ -28,7 +28,7 @@ import org.u_group13.mamizou.listeners.irc.CTCPListenerIRC;
 import org.u_group13.mamizou.listeners.irc.GenericListenerIRC;
 import org.u_group13.mamizou.listeners.irc.MessageListenerIRC;
 import org.u_group13.mamizou.util.Helper;
-import org.u_group13.mamizou.util.StringUtil;
+import org.u_group13.mamizou.util.VersionProvider;
 import picocli.CommandLine;
 import sun.misc.Signal;
 
@@ -41,8 +41,8 @@ import java.security.spec.InvalidKeySpecException;
 import java.util.Random;
 import java.util.concurrent.Callable;
 
-@CommandLine.Command(name = "MamizouBot", mixinStandardHelpOptions = true, version = StringUtil.VERSION,
-					 description = "Begins an instance of the MamizouBot relay")
+@CommandLine.Command(name = "MamizouBot", mixinStandardHelpOptions = true, description = "Begins an instance of the MamizouBot relay",
+		versionProvider = VersionProvider.class)
 public class Main implements Callable<Integer>
 {
 	private static final Logger LOGGER = LoggerFactory.getLogger(Main.class);
@@ -246,13 +246,13 @@ public class Main implements Callable<Integer>
 
 		LOGGER.info("Registering IRC commands...");
 
-		IRCCommandBase.ExecutorHelper.COMMAND_MAP.put("!whois", DiscordWHOISCommand::new);
-		IRCCommandBase.ExecutorHelper.COMMAND_MAP.put("!names", DiscordNamesCommand::new);
-		IRCCommandBase.ExecutorHelper.COMMAND_MAP.put("!version", IRCVersionCommand::new);
-		IRCCommandBase.ExecutorHelper.COMMAND_MAP.put("!accept", AcceptLinkCommand::new);
-		IRCCommandBase.ExecutorHelper.COMMAND_MAP.put("!reject", RejectLinkCommand::new);
-		IRCCommandBase.ExecutorHelper.COMMAND_MAP.put("!link", LinkCommand::new);
-		IRCCommandBase.ExecutorHelper.COMMAND_MAP.put("!unlink", UnlinkCommand::new);
+		IRCCommandBase.COMMAND_MAP.put("!whois", DiscordWHOISCommand::new);
+		IRCCommandBase.COMMAND_MAP.put("!names", DiscordNamesCommand::new);
+		IRCCommandBase.COMMAND_MAP.put("!version", IRCVersionCommand::new);
+		IRCCommandBase.COMMAND_MAP.put("!accept", AcceptLinkCommand::new);
+		IRCCommandBase.COMMAND_MAP.put("!reject", RejectLinkCommand::new);
+		IRCCommandBase.COMMAND_MAP.put("!link", LinkCommand::new);
+		IRCCommandBase.COMMAND_MAP.put("!unlink", UnlinkCommand::new);
 	}
 
 	public static Config getConfig()

@@ -13,12 +13,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.u_group13.mamizou.Main;
 import org.u_group13.mamizou.util.IRCCodes;
+import org.u_group13.mamizou.util.StringUtil;
 
 import java.util.Optional;
 
 public class MessageListenerDiscord extends ListenerAdapter
 {
 	private static final Logger LOGGER = LoggerFactory.getLogger(MessageListenerDiscord.class);
+	public static final int MAX_IRC_MESSAGE = 512;
 
 	@Override
 	public void onMessageReceived(@NotNull MessageReceivedEvent event)
@@ -48,12 +50,14 @@ public class MessageListenerDiscord extends ListenerAdapter
 				{
 					if (messageContent.indexOf('\n') >= 0)
 						for (String s : messageContent.split("\n"))
-							ircChannel.sendMessage(coloredNick + ' ' + s);
+							StringUtil.consumeString(ircChannel::sendMessage, coloredNick + ' ' + s, MAX_IRC_MESSAGE);
+//							ircChannel.sendMessage(coloredNick + ' ' + s);
 					else
 						ircChannel.sendMessage(coloredNick + ' ' + messageContent);
 				}
 				for (Message.Attachment attachment : event.getMessage().getAttachments())
-					ircChannel.sendMessage(coloredNick + ' ' + attachment.getUrl());
+					StringUtil.consumeString(ircChannel::sendMessage, coloredNick + ' ' + attachment.getUrl(), MAX_IRC_MESSAGE);
+//					ircChannel.sendMessage(coloredNick + ' ' + attachment.getUrl());
 			} else
 				LOGGER.warn("Discord channel {} ({}) is mapped to {}, but IRC client couldn't find it!", event.getChannel().getName(), discordChanID, ircChannelName);
 		}

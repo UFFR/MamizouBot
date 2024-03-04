@@ -7,17 +7,14 @@ import club.minnced.discord.webhook.send.AllowedMentions;
 import club.minnced.discord.webhook.send.WebhookMessageBuilder;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.engio.mbassy.listener.Handler;
-import org.eclipse.collections.api.factory.primitive.LongObjectMaps;
-import org.eclipse.collections.api.map.primitive.MutableLongObjectMap;
-import org.eclipse.collections.api.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.kitteh.irc.client.library.event.channel.*;
+import org.kitteh.irc.client.library.event.user.PrivateMessageEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.u_group13.mamizou.commands.IRCCommandBase;
 import org.u_group13.mamizou.config.LinkEntry;
 import org.u_group13.mamizou.config.LinkRegistries;
-import org.u_group13.mamizou.util.StringUtil;
 
 import java.util.Optional;
 
@@ -28,7 +25,7 @@ public class MessageListenerIRC
 	@Handler
 	public void onUserMessage(@NotNull ChannelMessageEvent event)
 	{
-		LOGGER.trace("Got message from {}: ", event.getActor().getUserString());
+		LOGGER.trace("Got message from {}: ", event.getActor().getHost());
 
 		if (config.ignoredUsers.ignoredHosts.contains(event.getActor().getHost()))
 			return;
@@ -79,7 +76,15 @@ public class MessageListenerIRC
 				messageBuilder.setContent(message).setAllowedMentions(AllowedMentions.none());
 				webhookClient.send(messageBuilder.build()).thenAccept(helper::addSentMessage);
 			} else
-				textChannel.sendMessage(StringUtil.getIrcUserSentMessageString(event)).queue();
+				textChannel.sendMessage(
+						String.format("**<%s>** %s", event.getActor().getMessagingName(),
+						              event.getMessage())).queue();
 		}
+	}
+
+	@Handler
+	public void onPrivateMessage(@NotNull PrivateMessageEvent event)
+	{
+		LOGGER.debug("Client received a private message from {}", event.getActor().getHost());
 	}
 }

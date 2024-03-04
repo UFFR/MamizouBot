@@ -129,6 +129,7 @@ public class Helper
 		}
 	}
 
+	@Deprecated
 	public void offerUserCache(long guildID, long userID, String name, String avatar)
 	{
 //		userCache.put(userID, Tuples.pair(name, avatar));

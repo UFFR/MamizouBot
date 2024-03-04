@@ -1,86 +1,55 @@
 package org.u_group13.mamizou.util;
 
-import net.dv8tion.jda.api.events.guild.member.update.GuildMemberUpdateNicknameEvent;
+import org.eclipse.collections.api.factory.Maps;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
+import org.kitteh.irc.client.library.element.Channel;
 import org.kitteh.irc.client.library.element.User;
+import org.kitteh.irc.client.library.element.mode.ChannelUserMode;
 import org.kitteh.irc.client.library.element.mode.Mode;
 import org.kitteh.irc.client.library.element.mode.ModeStatus;
-import org.kitteh.irc.client.library.event.channel.*;
 import org.kitteh.irc.client.library.event.user.UserModeEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.u_group13.mamizou.Main;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.StringJoiner;
+import java.io.IOException;
+import java.net.URL;
+import java.util.*;
+import java.util.function.Consumer;
+import java.util.jar.Manifest;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class StringUtil
 {
-//	private static final Logger LOGGER = LoggerFactory.getLogger(StringUtil.class);
-	public static final String VERSION = "0.3.0-SNAPSHOT";
+	private static final Logger LOGGER = LoggerFactory.getLogger(StringUtil.class);
+	public static final String VERSION;// = "0.3.0-SNAPSHOT";
+	static
+	{
+		String v;
+		try
+		{
+			final URL resource = Main.class.getClassLoader().getResource("META-INF/MANIFEST.MF");
+			assert resource != null;
+			final Manifest manifest = new Manifest(resource.openStream());
+
+			v = manifest.getMainAttributes().getValue("Build-Version");
+		} catch (IOException e)
+		{
+			LOGGER.error("Death and hatred to mankind", e);
+			v = "0.3.0-SNAPSHOT";// Fallback
+		}
+		VERSION = v;
+	}
 	public static final String SPLIT_REGEX = "[^\\s\"']+|\"([^\"]*)\"|'([^']*)'";
 	public static final String BUTTON_ID_REGEX = "(A|R)\\:\\w+";
 	public static final Pattern SPLIT_PATTERN = Pattern.compile(SPLIT_REGEX);
-	public static final String IRC_CHANNEL_TOPIC_UPDATE = "Channel topic updated to \"%s\" by **%s**";
-	public static final String IRC_CHANNEL_MODE_UPDATE = "Channel mode updated to **%s** by **%s**";
-	public static final String IRC_CHANNEL_KNOCK = "**%s** knocked";
-	public static final String IRC_CHANNEL_NOTICE = "**%s** sent notice: %s";
-	public static final String IRC_USER_SENT_MESSAGE = "**<%s>** %s";
-	public static final String IRC_USER_JOINED = "**%s** has joined the channel";
-	public static final String IRC_USER_PARTED = "**%s** has left the channel (%s)";
-	public static final String IRC_USER_KICKED = "**%s** was kicked by **%s** (%s)";
 	public static final String IRC_USER_MODE_UPDATED = "**%s** mode updated to **%s**";
-	public static final String DISCORD_USER_NICK_CHANGED = "%s is now known as %s";
-
-	public static String getChannelTopicUpdateString(@NotNull ChannelTopicEvent event)
-	{
-		return String.format(IRC_CHANNEL_TOPIC_UPDATE, event.getNewTopic().getValue().orElse(""), event.getNewTopic().getSetter().orElse(null));
-	}
-
-	public static String getIrcChannelModeUpdateString(@NotNull ChannelModeEvent event)
-	{
-		return String.format(IRC_CHANNEL_MODE_UPDATE, modesToString(event.getStatusList().getAll()), event.getActor().getName());
-	}
-
-	public static String getIrcChannelKnockString(@NotNull ChannelKnockEvent event)
-	{
-		return String.format(IRC_CHANNEL_KNOCK, event.getActor().getMessagingName());
-	}
-
-	public static String getIrcNoticeString(@NotNull ChannelNoticeEvent event)
-	{
-		return String.format(IRC_CHANNEL_NOTICE, event.getActor().getMessagingName(), event.getMessage());
-	}
-
-	public static String getIrcUserSentMessageString(@NotNull ChannelMessageEvent event)
-	{
-		return String.format(IRC_USER_SENT_MESSAGE, event.getActor().getMessagingName(), event.getMessage());
-	}
-
-	public static String getIrcUserJoinedString(@NotNull ChannelJoinEvent event)
-	{
-		return String.format(IRC_USER_JOINED, event.getUser().getMessagingName());
-	}
-
-	public static String getIrcUserPartedString(@NotNull ChannelPartEvent event)
-	{
-		return String.format(IRC_USER_PARTED, event.getUser().getMessagingName(), event.getMessage());
-	}
-
-	public static String getIrcUserKickedString(@NotNull ChannelKickEvent event)
-	{
-		return String.format(IRC_USER_KICKED, event.getTarget().getMessagingName(), event.getActor().getName(), event.getMessage());
-	}
 
 	public static String getIrcUserModeUpdated(@NotNull UserModeEvent event)
 	{
 		return String.format(IRC_USER_MODE_UPDATED, event.getActor().getName(), modesToString(event.getStatusList().getAll()));
-	}
-
-	public static String getDiscordUserNickChanged(@NotNull GuildMemberUpdateNicknameEvent event)
-	{
-		return String.format(DISCORD_USER_NICK_CHANGED, event.getOldNickname(), event.getNewNickname());
 	}
 
 	@NotNull
@@ -100,7 +69,7 @@ public class StringUtil
 	}
 
 	@NotNull
-	public static String getWHOIS(@NotNull User user)
+	public static String getWHOIS(@NotNull User user, @NotNull Channel channel)
 	{
 		final StringBuilder builder = new StringBuilder(500);
 
@@ -110,6 +79,15 @@ public class StringUtil
 				.append("Channels: ").append(user.getChannels()).append('\n')
 				.append("Real name: ").append(user.getRealName().orElse(null)).append('\n')
 				.append("User string: ").append(user.getUserString()).append('\n');
+
+		final Optional<SortedSet<ChannelUserMode>> userModes = channel.getUserModes(user);
+		if (userModes.isPresent())
+		{
+			final SortedSet<ChannelUserMode> modes = userModes.get();
+			builder.append(userModesToString(modes)).append('\n');
+			builder.append("Nick prefix: ").append(modes.getFirst()).append('\n');
+		} else
+			builder.append("User has no modes\n");
 
 		if (user.getAccount().isPresent())
 			builder.append("Is logged in as: ").append(user.getAccount().get()).append('\n');
@@ -135,7 +113,7 @@ public class StringUtil
 
 	// Cursed
 	@NotNull
-	public static String modesToString(@NotNull List<? extends ModeStatus<? extends Mode>> modes)
+	public static String modesToString(@NotNull Collection<? extends ModeStatus<? extends Mode>> modes)
 	{
 		final StringBuilder combined = new StringBuilder(modes.size() * 2);
 		final StringBuilder added = new StringBuilder(modes.size());
@@ -154,6 +132,18 @@ public class StringUtil
 		if (parameters.length() > 0)
 			combined.append(' ').append(parameters);
 		return combined.toString();
+	}
+
+	@NotNull
+	public static String userModesToString(@NotNull Collection<ChannelUserMode> modes)
+	{
+		final StringBuilder added = new StringBuilder(modes.size() + 1);
+
+		added.append('+');
+		for (ChannelUserMode mode : modes)
+			added.append(mode.getChar());
+
+		return added.toString();
 	}
 
 	@NotNull
@@ -178,6 +168,16 @@ public class StringUtil
 	{
 		final List<String> matchList = splitStringList(string);
 		return matchList.toArray(new String[0]);
+	}
+
+	public static void consumeString(Consumer<String> consumer, @NotNull String original, int maxLen)
+	{
+		int pos = 0;
+		while (original.length() - pos > maxLen)
+		{
+			consumer.accept(original.substring(pos, Math.min(maxLen + pos, original.length())));
+			pos += maxLen;
+		}
 	}
 
 }
