@@ -4,7 +4,6 @@ import static org.u_group13.mamizou.Main.config;
 import static org.u_group13.mamizou.Main.helper;
 
 import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.events.guild.member.update.GuildMemberUpdateNicknameEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import org.jetbrains.annotations.NotNull;
@@ -12,8 +11,9 @@ import org.kitteh.irc.client.library.element.Channel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.u_group13.mamizou.Main;
-import org.u_group13.mamizou.util.IRCCodes;
+import org.u_group13.mamizou.util.IRCCode;
 import org.u_group13.mamizou.util.StringUtil;
+import org.u_group13.mamizou.util.converter.DiscordToIRC;
 
 import java.util.Optional;
 
@@ -42,22 +42,14 @@ public class MessageListenerDiscord extends ListenerAdapter
 			final Optional<Channel> optionalChannel = Main.getIrcClient().getChannel(ircChannelName);
 			if (optionalChannel.isPresent())
 			{
-				final String messageContent = event.getMessage().getContentDisplay();
+				final String messageContent = DiscordToIRC.convert(event.getMessage().getContentDisplay());
 				final Channel ircChannel = optionalChannel.get();
 				final String name = event.getAuthor().getEffectiveName();
-				final String coloredNick = IRCCodes.getColoredNick(name);
+				final String coloredNick = IRCCode.getColoredNick(name);
 				if (!messageContent.isEmpty())
-				{
-					if (messageContent.indexOf('\n') >= 0)
-						for (String s : messageContent.split("\n"))
-							StringUtil.consumeString(ircChannel::sendMessage, coloredNick + ' ' + s, MAX_IRC_MESSAGE);
-//							ircChannel.sendMessage(coloredNick + ' ' + s);
-					else
-						ircChannel.sendMessage(coloredNick + ' ' + messageContent);
-				}
+					ircChannel.sendMultiLineMessage(coloredNick + ' ' + messageContent);
 				for (Message.Attachment attachment : event.getMessage().getAttachments())
-					StringUtil.consumeString(ircChannel::sendMessage, coloredNick + ' ' + attachment.getUrl(), MAX_IRC_MESSAGE);
-//					ircChannel.sendMessage(coloredNick + ' ' + attachment.getUrl());
+					ircChannel.sendMessage(coloredNick + ' ' + attachment.getUrl());
 			} else
 				LOGGER.warn("Discord channel {} ({}) is mapped to {}, but IRC client couldn't find it!", event.getChannel().getName(), discordChanID, ircChannelName);
 		}

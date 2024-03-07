@@ -1,4 +1,14 @@
+buildscript {
+    repositories {
+        mavenCentral()
+        gradlePluginPortal()
+    }
+    dependencies {
+        classpath "gradle.plugin.com.github.johnrengelman:shadow:7.1.2"
+    }
+}
 plugins {
+    id 'com.github.johnrengelman.shadow' version '7.1.2'
     id 'java'
 }
 
@@ -8,7 +18,7 @@ def getVersionName = {
         commandLine("build-hasher", "-p", "src/")
         standardOutput = stdout
     }
-    return "0.3.0-SNAPSHOT" + '-' + stdout.toString().trim()
+    return "0.4.1-SNAPSHOT" + '-' + stdout.toString().trim()
 }
 
 group = 'org.u_group13'
@@ -52,7 +62,8 @@ test {
 jar {
     manifest {
         attributes (
-            "Build-Version": "${ version }"
+            "Build-Version": "${ version }",
+            "Main-Class": "org.u_group13.mamizou.Main"
         )
     }
 }

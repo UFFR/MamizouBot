@@ -28,7 +28,7 @@ public class DiscordNamesCommand extends IRCCommandBase
 	@Override
 	public Integer call() throws Exception
 	{
-		final String ircChannel = context.channel().getMessagingName();
+		final String ircChannel = context.channel().getName();
 		if (Main.helper.ircToDiscordMapping.containsKey(ircChannel))
 		{
 			final long chanID = Main.helper.ircToDiscordMapping.get(ircChannel);

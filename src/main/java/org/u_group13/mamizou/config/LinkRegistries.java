@@ -121,10 +121,7 @@ public class LinkRegistries implements Serializable
 		if (!discordRequests.containsKey(discordID))
 			return false;
 
-		final LinkEntry entry = discordRequests.remove(discordID).tryCache();
-
-		discordRegistries.put(discordID, entry);
-		ircRegistries.put(entry.ircAccount, entry);
+		addEntry(discordRequests.remove(discordID).tryCache());
 
 		return true;
 	}
@@ -134,10 +131,7 @@ public class LinkRegistries implements Serializable
 		if (!ircRequests.containsKey(ircAccount))
 			return false;
 
-		final LinkEntry entry = ircRequests.remove(ircAccount).tryCache();
-
-		discordRegistries.put(entry.discordID, entry);
-		ircRegistries.put(entry.ircAccount, entry);
+		addEntry(ircRequests.remove(ircAccount).tryCache());
 
 		return true;
 	}

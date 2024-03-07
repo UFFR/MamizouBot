@@ -62,7 +62,7 @@ public class APIListenerDiscord extends ListenerAdapter
 							config.channelMapping.get(event.getChannelIdLong()));
 					if (optionalChannel.isPresent())
 					{
-						final Channel channel = optionalChannel.get();
+						final Channel channel = optionalChannel.get().getLatest().orElseGet(optionalChannel::get);
 						getIrcClient().commands().whois().target(username).execute();
 						final Optional<User> optionalUser = channel.getUser(username);
 

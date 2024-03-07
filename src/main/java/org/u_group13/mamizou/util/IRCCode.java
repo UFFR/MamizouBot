@@ -3,7 +3,7 @@ package org.u_group13.mamizou.util;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
-public enum IRCCodes
+public enum IRCCode
 {
 	BOLD(0x02),
 	ITALIC(0x1d),
@@ -15,7 +15,7 @@ public enum IRCCodes
 	RESET(0x0f);
 
 	public final char code;
-	IRCCodes(int code)
+	IRCCode(int code)
 	{
 		this.code = (char) code;
 	}

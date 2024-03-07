@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import org.u_group13.mamizou.commands.IRCCommandBase;
 import org.u_group13.mamizou.config.LinkEntry;
 import org.u_group13.mamizou.config.LinkRegistries;
+import org.u_group13.mamizou.util.converter.IRCToDiscord;
 
 import java.util.Optional;
 
@@ -77,8 +78,8 @@ public class MessageListenerIRC
 				webhookClient.send(messageBuilder.build()).thenAccept(helper::addSentMessage);
 			} else
 				textChannel.sendMessage(
-						String.format("**<%s>** %s", event.getActor().getMessagingName(),
-						              event.getMessage())).queue();
+						String.format("<**%s**> %s", event.getActor().getMessagingName(),
+						              IRCToDiscord.convert(event.getMessage()))).queue();
 		}
 	}
 
@@ -86,5 +87,10 @@ public class MessageListenerIRC
 	public void onPrivateMessage(@NotNull PrivateMessageEvent event)
 	{
 		LOGGER.debug("Client received a private message from {}", event.getActor().getHost());
+
+		final String message = event.getMessage();
+
+		if (!message.isEmpty() && message.charAt(0) == '!')
+			IRCCommandBase.tryExecute(event);
 	}
 }

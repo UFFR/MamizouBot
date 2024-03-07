@@ -132,7 +132,7 @@ public class GenericListenerIRC
 			final long discordChanID = helper.ircToDiscordMapping.get(event.getChannel().getMessagingName());
 			final TextChannel textChannel = getJda().getTextChannelById(discordChanID);
 			if (textChannel != null)
-				textChannel.sendMessage(String.format("Channel mode updated to **%s** by **%s**",
+				textChannel.sendMessage(String.format("Channel mode updated to [**%s**] by **%s**",
 				                                      StringUtil.modesToString(event.getStatusList().getAll()),
 				                                      event.getActor().getName())).queue();
 			else

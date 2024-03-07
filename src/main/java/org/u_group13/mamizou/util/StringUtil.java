@@ -24,10 +24,10 @@ import java.util.regex.Pattern;
 public class StringUtil
 {
 	private static final Logger LOGGER = LoggerFactory.getLogger(StringUtil.class);
-	public static final String VERSION;// = "0.3.0-SNAPSHOT";
+	public static final String VERSION;
 	static
 	{
-		final String fallback = "0.3.1-SNAPSHOT";
+		final String fallback = "0.4.1-SNAPSHOT";
 		String v;
 		try
 		{
@@ -88,8 +88,8 @@ public class StringUtil
 		if (userModes.isPresent())
 		{
 			final SortedSet<ChannelUserMode> modes = userModes.get();
-			builder.append(userModesToString(modes)).append('\n');
-			builder.append("Nick prefix: ").append(modes.getFirst()).append('\n');
+			builder.append("User modes: [").append(userModesToString(modes)).append("]\n");
+			builder.append("Nick prefix: ").append(modes.getFirst().getNickPrefix()).append('\n');
 		} else
 			builder.append("User has no modes\n");
 

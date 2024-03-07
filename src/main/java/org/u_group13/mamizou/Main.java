@@ -90,8 +90,9 @@ public class Main implements Callable<Integer>
 		readConfig(configPath);
 
 		LOGGER.info("Setting up signal handlers...");
-		Signal.handle(new Signal("HUP"), Main::hangupHandler);
-		Signal.handle(new Signal("TERM"), Main::termHandler);
+		Signal.handle(new Signal("HUP"), Main::handleSignal);
+		Signal.handle(new Signal("TERM"), Main::handleSignal);
+		Signal.handle(new Signal("INT"), Main::handleSignal);
 
 		LOGGER.info("Setting up JDA...");
 		jda = JDABuilder.createDefault(apiKey == null ? config.discordToken : new String(apiKey))
@@ -313,26 +314,25 @@ public class Main implements Callable<Integer>
 		};
 	}
 
-	private static void hangupHandler(Signal signal)
+	private static void handleSignal(Signal signal)
 	{
-		LOGGER.info("Received signal {}", signal);
+		LOGGER.info("Received {}", signal);
 
-		if ("HUP".equalsIgnoreCase(signal.getName()))
+		final String name = signal.getName().toUpperCase();
+
+		switch (name)
 		{
-			LOGGER.info("SIGHUP received, reloading configuration...");
-			readConfig(getInstance().getConfigPath());
-		}
-	}
-
-	private static void termHandler(Signal signal)
-	{
-		LOGGER.info("Received signal {}", signal);
-
-		if ("TERM".equalsIgnoreCase(signal.getName()))
-		{
-			LOGGER.info("Attempting to shutdown gracefully...");
-			jda.shutdown();
-			ircClient.shutdown("SIGTERM received, shutting down gracefully...");
+			case "HUP":
+				LOGGER.info("SIGHUP received, reloading configuration...");
+				readConfig(getInstance().getConfigPath());
+				break;
+			case "INT":
+			case "TERM":
+				LOGGER.info("SIGTERM/SIGINT received, attempting to shutdown gracefully...");
+				jda.shutdown();
+				ircClient.shutdown("SIGTERM/SIGINT received, shutting down gracefully...");
+				break;
+			default: LOGGER.info("Signal is unhandled"); break;
 		}
 	}
 }

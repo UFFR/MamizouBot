@@ -4,6 +4,7 @@ import org.jetbrains.annotations.NotNull;
 import org.kitteh.irc.client.library.element.Channel;
 import org.kitteh.irc.client.library.element.User;
 import org.kitteh.irc.client.library.event.channel.ChannelMessageEvent;
+import org.kitteh.irc.client.library.event.user.PrivateMessageEvent;
 import org.u_group13.mamizou.util.StringUtil;
 import picocli.CommandLine;
 
@@ -19,7 +20,51 @@ public abstract class IRCCommandBase implements Callable<Integer>
 {
 	public static final Map<String, Function<CommandContext, IRCCommandBase>> COMMAND_MAP = new HashMap<>();
 
-	public record CommandContext(User sender, Channel channel)
+	public abstract static class MessageSource
+	{
+		public abstract void sendMessage(String message);
+		public abstract String getName();
+	}
+
+	public static class ChannelMessageSource extends MessageSource
+	{
+		private final Channel channel;
+
+		public ChannelMessageSource(Channel channel) {this.channel = channel;}
+
+		@Override
+		public void sendMessage(String message)
+		{
+			channel.sendMessage(message);
+		}
+
+		@Override
+		public String getName()
+		{
+			return channel.getMessagingName();
+		}
+	}
+
+	public static class PrivateMessageSource extends MessageSource
+	{
+		private final User user;
+
+		public PrivateMessageSource(User user) {this.user = user;}
+
+		@Override
+		public void sendMessage(String message)
+		{
+			user.sendMessage(message);
+		}
+
+		@Override
+		public String getName()
+		{
+			return user.getMessagingName();
+		}
+	}
+
+	public record CommandContext(User sender, MessageSource channel)
 		{
 		}
 
@@ -31,15 +76,22 @@ public abstract class IRCCommandBase implements Callable<Integer>
 		this.context = context;
 	}
 
+	public static void tryExecute(@NotNull PrivateMessageEvent event)
+	{
+		tryExecute(event.getMessage(), event.getActor(), new PrivateMessageSource(event.getActor()));
+	}
+
 	public static void tryExecute(@NotNull ChannelMessageEvent event)
 	{
+		tryExecute(event.getMessage(), event.getActor(), new ChannelMessageSource(event.getChannel()));
+	}
+
+	public static void tryExecute(String rawCommand, User sender, MessageSource source)
+	{
 		final int result;
-		final String rawCommand = event.getMessage();
 		final String[] commandAndArgs = StringUtil.splitStringArray(rawCommand);
 
 		final String command = commandAndArgs[0].toLowerCase();
-		final User sender = event.getActor();
-		final Channel channel = event.getChannel();
 		final StringWriter outStringWriter = new StringWriter(500);
 
 		if (COMMAND_MAP.containsKey(command))
@@ -50,7 +102,7 @@ public abstract class IRCCommandBase implements Callable<Integer>
 
 			final PrintWriter out = new PrintWriter(outStringWriter);
 
-			result = new CommandLine(COMMAND_MAP.get(command).apply(new CommandContext(sender, channel)))
+			result = new CommandLine(COMMAND_MAP.get(command).apply(new CommandContext(sender, source)))
 					.setOut(out).setErr(out)
 					.execute(args);
 		} else
@@ -58,25 +110,20 @@ public abstract class IRCCommandBase implements Callable<Integer>
 
 		if (result == -1)
 		{
-			channel.sendMessage("Unknown command");
+			source.sendMessage("Unknown command");
 			return;
 		}
 
-		final String outputRaw = outStringWriter.toString();
+		final String output = outStringWriter.toString();
 
 		if (result != 0)
 			sender.sendMessage(String.format("Command exited with code %s", result));
 
-		if (outputRaw.isBlank())
+		if (output.isBlank())
 			return;
 
-		final String[] output = outputRaw.replace("\0", "").split("[\n\r]");
-
 		sender.sendMessage("Begin command dump:");
-
-		for (String s : output)
-			sender.sendMessage(s);
-
+		sender.sendMultiLineMessage(output);
 		sender.sendMessage("End command dump");
 	}
 }
