@@ -12,7 +12,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.u_group13.mamizou.Main;
 import org.u_group13.mamizou.util.IRCCode;
-import org.u_group13.mamizou.util.StringUtil;
 import org.u_group13.mamizou.util.converter.DiscordToIRC;
 
 import java.util.Optional;

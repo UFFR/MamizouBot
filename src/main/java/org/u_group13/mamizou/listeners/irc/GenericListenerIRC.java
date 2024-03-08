@@ -6,8 +6,11 @@ import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.engio.mbassy.listener.Handler;
 import org.jetbrains.annotations.NotNull;
 import org.kitteh.irc.client.library.element.Channel;
+import org.kitteh.irc.client.library.element.User;
 import org.kitteh.irc.client.library.event.channel.*;
+import org.kitteh.irc.client.library.event.user.UserAwayMessageEvent;
 import org.kitteh.irc.client.library.event.user.UserModeEvent;
+import org.kitteh.irc.client.library.event.user.UserNickChangeEvent;
 import org.kitteh.irc.client.library.event.user.UserQuitEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,10 +23,11 @@ public class GenericListenerIRC
 	private static final Logger LOGGER = LoggerFactory.getLogger(GenericListenerIRC.class);
 
 	@Handler
-	public void onUserJoinChannelIRC(@NotNull ChannelJoinEvent event)
+	public void onUserJoinChannel(@NotNull ChannelJoinEvent event)
 	{
+		LOGGER.trace("User {} joined channel {}", event.getUser(), event.getChannel());
+
 		final String channelName = event.getChannel().getMessagingName();
-		LOGGER.trace("User {} joined channel {}", event.getUser().getMessagingName(), channelName);
 		if (event.getClient().isUser(event.getUser()) || helper.ignoredUsers.ignoredHosts.contains(event.getUser().getHost()))
 			return;
 
@@ -42,19 +46,47 @@ public class GenericListenerIRC
 	@Handler
 	public void onUserKicked(@NotNull ChannelKickEvent event)
 	{
-		LOGGER.debug("User {} kicked from channel {}", event.getUser().getUserString(), event.getChannel().getMessagingName());
+		LOGGER.debug("User {} kicked from channel {}", event.getUser(), event.getChannel());
 
-		if (helper.ircToDiscordMapping.containsKey(event.getChannel().getMessagingName()))
+		final String channelName = event.getChannel().getMessagingName();
+		if (helper.ircToDiscordMapping.containsKey(channelName))
 		{
 			final TextChannel textChannel = getJda()
 					.getTextChannelById(helper.ircToDiscordMapping.get(
-							event.getChannel().getMessagingName()));
+							channelName));
 			if (textChannel != null)
+			{
 				textChannel.sendMessage(String.format("**%s** was kicked by **%s** (%s)", event.getTarget().getMessagingName(),
 				                                      event.getActor().getName(), event.getMessage())).queue();
-			else
+			} else
 				LOGGER.warn("IRC channel is mapped, but JDA couldn't find Discord text channel!");
 		}
+	}
+
+	@Handler
+	public void onUserAwayUpdated(@NotNull UserAwayMessageEvent event)
+	{
+		LOGGER.trace("User {} away status updated to \"{}\"", event.getActor(), event.getAwayMessage());
+
+		final String message = event.isAway()
+				? String.format("**%s** is away with message: %s", event.getActor().getMessagingName(),
+		                                    event.getAwayMessage().orElse(""))
+				: String.format("**%s** is no longer away", event.getActor().getMessagingName());
+
+		for (String channelName : event.getActor().getChannels())
+		{
+			if (helper.ircToDiscordMapping.containsKey(channelName))
+			{
+				final long discordChanID = helper.ircToDiscordMapping.get(channelName);
+
+				final TextChannel textChannel = getJda().getTextChannelById(discordChanID);
+				if (textChannel != null)
+					textChannel.sendMessage(message).queue();
+				else
+					LOGGER.warn("Channel {} is mapped to {}, but JDA couldn't find!", channelName, discordChanID);
+			}
+		}
+
 	}
 
 	@Handler
@@ -70,10 +102,11 @@ public class GenericListenerIRC
 			final long discordChanID = helper.ircToDiscordMapping.get(event.getChannel().getMessagingName());
 			final TextChannel textChannel = getJda().getTextChannelById(discordChanID);
 			if (textChannel != null)
+			{
 				textChannel.sendMessage(
 						String.format("Channel topic updated to \"%s\" by **%s**", event.getNewTopic().getValue().orElse(""),
 						              event.getNewTopic().getSetter().orElse(null))).queue();
-			else
+			} else
 				LOGGER.warn("IRC channel {} is mapped to {}, but JDA couldn't find!", event.getChannel(), discordChanID);
 		}
 	}
@@ -81,8 +114,9 @@ public class GenericListenerIRC
 	@Handler
 	public void onUserPartChannelIRC(@NotNull ChannelPartEvent event)
 	{
+		LOGGER.trace("User {} left channel {}", event.getUser(), event.getChannel());
+
 		final String channelName = event.getChannel().getMessagingName();
-		LOGGER.trace("User {} left channel {}", event.getUser().getMessagingName(), channelName);
 		if (helper.ignoredUsers.ignoredHosts.contains(event.getUser().getHost()))
 			return;
 
@@ -91,9 +125,10 @@ public class GenericListenerIRC
 			final long discordChanID = helper.ircToDiscordMapping.get(channelName);
 			final TextChannel textChannel = getJda().getTextChannelById(discordChanID);
 			if (textChannel != null)
+			{
 				textChannel.sendMessage(String.format("**%s** has left the channel (%s)", event.getUser().getMessagingName(),
 				                                      event.getMessage())).queue();
-			else
+			} else
 				LOGGER.warn("Channel {} is mapped to {}, but JDA couldn't find!", channelName, discordChanID);
 		}
 	}
@@ -101,7 +136,8 @@ public class GenericListenerIRC
 	@Handler
 	public void onUserQuitServer(@NotNull UserQuitEvent event)
 	{
-		LOGGER.trace("User {} quit the server", event.getUser().getMessagingName());
+		LOGGER.trace("User {} quit the server", event.getUser());
+
 		if (helper.ignoredUsers.ignoredHosts.contains(event.getUser().getHost()))
 			return;
 
@@ -113,10 +149,11 @@ public class GenericListenerIRC
 			final long discordChanID = helper.ircToDiscordMapping.get(channel);
 			final TextChannel textChannel = getJda().getTextChannelById(discordChanID);
 			if (textChannel != null)
+			{
 				textChannel.sendMessage(
 						           String.format("**%s** has quit (%s)", event.getUser().getMessagingName(), event.getMessage()))
 				           .queue();
-			else
+			} else
 				LOGGER.warn("Channel {} is mapped to {}, but JDA couldn't find!", channel, discordChanID);
 		}
 
@@ -125,17 +162,18 @@ public class GenericListenerIRC
 	@Handler
 	public void onChannelModeChanged(@NotNull ChannelModeEvent event)
 	{
-		LOGGER.debug("Channel {} updated mode to {}", event.getChannel().getMessagingName(), event.getStatusList());
+		LOGGER.debug("Channel {} updated mode to {}", event.getChannel(), event.getStatusList());
 
 		if (helper.ircToDiscordMapping.containsKey(event.getChannel().getMessagingName()))
 		{
 			final long discordChanID = helper.ircToDiscordMapping.get(event.getChannel().getMessagingName());
 			final TextChannel textChannel = getJda().getTextChannelById(discordChanID);
 			if (textChannel != null)
+			{
 				textChannel.sendMessage(String.format("Channel mode updated to [**%s**] by **%s**",
 				                                      StringUtil.modesToString(event.getStatusList().getAll()),
 				                                      event.getActor().getName())).queue();
-			else
+			} else
 				LOGGER.warn("IRC channel {} is mapped to {}, but JDA couldn't find!", event.getChannel(), discordChanID);
 		}
 	}
@@ -143,16 +181,17 @@ public class GenericListenerIRC
 	@Handler
 	public void onChannelKnock(@NotNull ChannelKnockEvent event)
 	{
-		LOGGER.debug("User {} knocks on channel {}", event.getActor().getHost(), event.getChannel().getMessagingName());
+		LOGGER.debug("User {} knocks on channel {}", event.getActor(), event.getChannel());
 
 		if (helper.ircToDiscordMapping.containsKey(event.getChannel().getMessagingName()))
 		{
 			final long discordChanID = helper.ircToDiscordMapping.get(event.getChannel().getMessagingName());
 			final TextChannel textChannel = getJda().getTextChannelById(discordChanID);
 			if (textChannel != null)
+			{
 				textChannel.sendMessage(
 						String.format("**%s** knocked", event.getActor().getMessagingName())).queue();
-			else
+			} else
 				LOGGER.warn("IRC channel {} is mapped to {}, but JDA couldn't find!", event.getChannel(), discordChanID);
 		}
 	}
@@ -160,7 +199,7 @@ public class GenericListenerIRC
 	@Handler
 	public void onChannelNotice(@NotNull ChannelNoticeEvent event)
 	{
-		LOGGER.debug("User {} sends notice to channel {}", event.getActor().getHost(), event.getChannel().getMessagingName());
+		LOGGER.debug("User {} sends notice to channel {}", event.getActor(), event.getChannel());
 
 		if (event.getClient().isUser(event.getActor()))
 			return;
@@ -170,10 +209,11 @@ public class GenericListenerIRC
 			final long discordChanID = helper.ircToDiscordMapping.get(event.getChannel().getMessagingName());
 			final TextChannel textChannel = getJda().getTextChannelById(discordChanID);
 			if (textChannel != null)
+			{
 				textChannel.sendMessage(
 						String.format("**%s** sent notice: %s", event.getActor().getMessagingName(),
 						              event.getMessage())).queue();
-			else
+			} else
 				LOGGER.warn("IRC channel {} is mapped to {}, but JDA couldn't find!", event.getChannel(), discordChanID);
 		}
 	}
@@ -182,6 +222,49 @@ public class GenericListenerIRC
 	public void onUserModeUpdated(@NotNull UserModeEvent event)
 	{
 		// TODO Finish
-		LOGGER.debug("User {} updated modes to {}", event.getActor().getName(), event.getStatusList());
+		LOGGER.debug("User {} updated modes to {}", event.getActor(), event.getStatusList());
+		for (Channel channel : getIrcClient().getChannels())
+		{
+			final Optional<User> optionalUser = channel.getUser(event.getActor().getName());
+			final String channelName = channel.getMessagingName();
+			if (helper.ircToDiscordMapping.containsKey(channelName) && optionalUser.isPresent())
+			{
+				LOGGER.trace("Found possible matching channel to send");
+				final long discordChanID = helper.ircToDiscordMapping.get(channelName);
+				final TextChannel textChannel = getJda().getTextChannelById(discordChanID);
+				if (textChannel != null)
+					textChannel.sendMessage(String.format("**%s** changed modes to [**%s**]", event.getActor().getName(), StringUtil.modesToString(event.getStatusList().getAll()))).queue();
+				else
+					LOGGER.warn("Channel {} is mapped to {}, but JDA couldn't find!", channelName, discordChanID);
+			}
+		}
+
+	}
+
+	@Handler
+	public void onUserNickUpdated(@NotNull UserNickChangeEvent event)
+	{
+		LOGGER.debug("User {} changed nick to {}", event.getActor(), event.getActor());
+
+		for (String channelName : event.getActor().getChannels())
+		{
+			final Optional<Channel> optionalChannel = getIrcClient().getChannel(channelName);
+			if (optionalChannel.isEmpty())
+			{
+				LOGGER.warn("Channel {} reported by client, but couldn't be found!", channelName);
+				continue;
+			}
+
+			if (helper.ircToDiscordMapping.containsKey(channelName))
+			{
+				final long discordChanID = helper.ircToDiscordMapping.get(channelName);
+				final TextChannel textChannel = getJda().getTextChannelById(discordChanID);
+				if (textChannel != null)
+					textChannel.sendMessage(String.format("**%s** is now known as **%s**", event.getOldUser().getMessagingName(), event.getNewUser().getMessagingName())).queue();
+				else
+					LOGGER.warn("Channel {} is mapped to {}, but JDA couldn't find!", channelName, discordChanID);
+			}
+		}
+
 	}
 }

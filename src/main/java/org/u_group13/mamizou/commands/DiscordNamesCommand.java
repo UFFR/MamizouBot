@@ -10,6 +10,7 @@ import picocli.CommandLine;
 import java.util.List;
 import java.util.stream.Collectors;
 
+// FIXME
 @CommandLine.Command(name = "names", description = "Get the available users from the Discord",
 		mixinStandardHelpOptions = true, version = "1.0.0")
 public class DiscordNamesCommand extends IRCCommandBase

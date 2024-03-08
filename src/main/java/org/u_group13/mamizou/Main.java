@@ -27,6 +27,7 @@ import org.u_group13.mamizou.listeners.discord.UserListenerDiscord;
 import org.u_group13.mamizou.listeners.irc.CTCPListenerIRC;
 import org.u_group13.mamizou.listeners.irc.GenericListenerIRC;
 import org.u_group13.mamizou.listeners.irc.MessageListenerIRC;
+import org.u_group13.mamizou.util.ConfigSaver;
 import org.u_group13.mamizou.util.Helper;
 import org.u_group13.mamizou.util.VersionProvider;
 import picocli.CommandLine;
@@ -40,12 +41,17 @@ import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Random;
 import java.util.concurrent.Callable;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 @CommandLine.Command(name = "MamizouBot", mixinStandardHelpOptions = true, description = "Begins an instance of the MamizouBot relay",
 		versionProvider = VersionProvider.class)
 public class Main implements Callable<Integer>
 {
 	private static final Logger LOGGER = LoggerFactory.getLogger(Main.class);
+	private static final Logger IRC_LOGGER = LoggerFactory.getLogger(Client.class);
+	private static final ScheduledExecutorService DATA_SAVE_SERVICE = Executors.newScheduledThreadPool(1);
 	public static final long MY_ID = 394580185074368525L;
 	public static final Random RANDOM = new Random();
 
@@ -93,10 +99,12 @@ public class Main implements Callable<Integer>
 		Signal.handle(new Signal("HUP"), Main::handleSignal);
 		Signal.handle(new Signal("TERM"), Main::handleSignal);
 		Signal.handle(new Signal("INT"), Main::handleSignal);
+		Signal.handle(new Signal("USR1"), Main::handleSignal);
 
 		LOGGER.info("Setting up JDA...");
 		jda = JDABuilder.createDefault(apiKey == null ? config.discordToken : new String(apiKey))
-						.enableIntents(GatewayIntent.MESSAGE_CONTENT,
+						.enableIntents(GatewayIntent.GUILD_MEMBERS,
+						               GatewayIntent.MESSAGE_CONTENT,
 						               GatewayIntent.GUILD_WEBHOOKS,
 						               GatewayIntent.GUILD_EMOJIS_AND_STICKERS)
 		                .disableIntents(GatewayIntent.AUTO_MODERATION_CONFIGURATION,
@@ -136,8 +144,10 @@ public class Main implements Callable<Integer>
 		ircClient.getEventManager().registerEventListener(new GenericListenerIRC());
 		ircClient.getEventManager().registerEventListener(new CTCPListenerIRC());
 
-		LOGGER.trace("Registering exception listener...");
+		LOGGER.trace("Registering listeners...");
 
+		ircClient.setInputListener(IRC_LOGGER::trace);
+		ircClient.setOutputListener(IRC_LOGGER::trace);
 		ircClient.setExceptionListener(e -> LOGGER.error("Unhandled exception in IRC client!", e));
 
 		LOGGER.trace("Trying to setup SASL...");
@@ -171,6 +181,10 @@ public class Main implements Callable<Integer>
 
 		LOGGER.info("Connection to IRC complete!");
 
+		LOGGER.info("Has capabilities: {}", ircClient.getCapabilityManager().getSupportedCapabilities());
+		LOGGER.info("Using capabilities: {}", ircClient.getCapabilityManager().getCapabilities());
+		LOGGER.info(ircClient.getServerInfo().hasWhoXSupport() ? "Has WHOX support" : "Does not have WHOX support");
+
 		return 0;
 	}
 
@@ -199,6 +213,10 @@ public class Main implements Callable<Integer>
 	public static void main(String[] args)
 	{
 		LOGGER.info("Entry point reached");
+
+		DATA_SAVE_SERVICE.scheduleAtFixedRate(ConfigSaver.getInstance(), 1, 1, TimeUnit.HOURS);
+
+		LOGGER.info("Setup data saver scheduled task");
 		new CommandLine(new Main()).execute(args);
 //		System.out.println("Hello world!");
 	}
@@ -227,17 +245,16 @@ public class Main implements Callable<Integer>
 										.addOption(OptionType.CHANNEL, "channel", "Channel to create in, defaults to current channel"),
 								new SubcommandData("offer", "Offer an existing webhook to use")
 										.addOption(OptionType.STRING, "url", "URL of the webhook to use"),
-								new SubcommandData("delete", "Delete a webhook"))
+								new SubcommandData("delete", "Delete a webhook")
+										.addOption(OptionType.INTEGER, "id", "Id of the webhook to delete"))
 				        .setGuildOnly(true)
 				        .setDefaultPermissions(DefaultMemberPermissions.DISABLED),
 				Commands.slash("optout", "Opt out of being included in relay messages and WHOIS queries."),
 				Commands.slash("optin", "Opt in for being included in relay messages and WHOIS queries"),
 				Commands.slash("names", "Get a list of names in the IRC."),
 				Commands.slash("link", "Link with an IRC account.")
-						.addOption(OptionType.STRING, "user", "The user account to link with, must be online.")
-						.setGuildOnly(true),
-				Commands.slash("unlink", "Unlink from an IRC account.")
-						.setGuildOnly(true),
+						.addOption(OptionType.STRING, "user", "The user account to link with, must be online."),
+				Commands.slash("unlink", "Unlink from an IRC account."),
 				Commands.slash("reject", "Reject link requests.")
 						.addOption(OptionType.STRING, "user", "The user account to reject.")
 						.addOption(OptionType.BOOLEAN, "all", "Reject all requests."),
@@ -331,6 +348,11 @@ public class Main implements Callable<Integer>
 				LOGGER.info("SIGTERM/SIGINT received, attempting to shutdown gracefully...");
 				jda.shutdown();
 				ircClient.shutdown("SIGTERM/SIGINT received, shutting down gracefully...");
+				ConfigSaver.getInstance().run();
+				break;
+			case "USR1":
+				LOGGER.info("SIGUSR1 received, attempting to save data...");
+				ConfigSaver.getInstance().run();
 				break;
 			default: LOGGER.info("Signal is unhandled"); break;
 		}

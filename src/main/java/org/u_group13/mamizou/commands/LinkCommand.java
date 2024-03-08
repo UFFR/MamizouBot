@@ -31,31 +31,37 @@ public class LinkCommand extends IRCCommandBase
 			return 10;
 		}
 
-		final User user = Main.getJda().retrieveUserById(discordID).onErrorMap(throwable -> null).complete();
+		if (Main.config.ignoredUsers.ignoredDiscordIDs.contains(discordID))
+		{
+			context.sender().sendMessage("User has either opted out or is on the ignore list!");
+			return 11;
+		}
 
 		final LinkRegistries linkRegistries = LinkRegistries.getInstance();
 		if (linkRegistries.isRegistered(discordID))
 		{
 			context.sender().sendMessage("Discord user is already linked!");
-			return 11;
+			return 12;
 		}
+
+		final User user = Main.getJda().retrieveUserById(discordID).onErrorMap(throwable -> null).complete();
 
 		if (user == null)
 		{
 			context.sender().sendMessage("User was not found!");
-			return 12;
+			return 13;
 		}
 
 		if (user.getMutualGuilds().isEmpty())
 		{
 			context.sender().sendMessage("User has no mutual guilds with relay!");
-			return 13;
+			return 14;
 		}
 
 		if (!user.hasPrivateChannel())
 		{
 			context.sender().sendMessage("User doesn't have open PMs!");
-			return 14;
+			return 15;
 		}
 
 		final String accountName = account.get();

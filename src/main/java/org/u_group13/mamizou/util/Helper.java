@@ -24,7 +24,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.u_group13.mamizou.Main;
 import org.u_group13.mamizou.config.Config;
-import org.u_group13.mamizou.config.LinkRegistries;
 
 import java.util.HashMap;
 import java.util.List;

@@ -14,7 +14,6 @@ import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import org.jetbrains.annotations.NotNull;
-import org.kitteh.irc.client.library.Client;
 import org.kitteh.irc.client.library.element.Channel;
 import org.kitteh.irc.client.library.element.User;
 import org.slf4j.Logger;
@@ -25,6 +24,7 @@ import org.u_group13.mamizou.config.LinkRegistries;
 import org.u_group13.mamizou.util.StringUtil;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -38,11 +38,6 @@ public class APIListenerDiscord extends ListenerAdapter
 	{
 		LOGGER.debug("Received API slash command {}", event.getCommandId());
 		final long userID = event.getUser().getIdLong();
-		if (userID != Main.MY_ID)
-		{
-			event.reply("403").queue();
-			return;
-		}
 
 		final LinkRegistries linkRegistries = LinkRegistries.getInstance();
 		switch (event.getName())
@@ -57,13 +52,12 @@ public class APIListenerDiscord extends ListenerAdapter
 				{
 					final String username = Objects.requireNonNull(event.getOption("user")).getAsString();
 					LOGGER.trace("Querying user {}", username);
-					final Client client = Main.getIrcClient();
-					final Optional<Channel> optionalChannel = client.getChannel(
+					final Optional<Channel> optionalChannel = getIrcClient().getChannel(
 							config.channelMapping.get(event.getChannelIdLong()));
 					if (optionalChannel.isPresent())
 					{
+						getIrcClient().commands().whois().server(config.ircOptions.server).target(username).execute();
 						final Channel channel = optionalChannel.get().getLatest().orElseGet(optionalChannel::get);
-						getIrcClient().commands().whois().target(username).execute();
 						final Optional<User> optionalUser = channel.getUser(username);
 
 						if (optionalUser.isEmpty())
@@ -75,6 +69,8 @@ public class APIListenerDiscord extends ListenerAdapter
 
 						LOGGER.trace("User was found");
 						event.getHook().sendMessage(StringUtil.getWHOIS(optionalUser.get(), channel)).queue();
+						if (!channel.hasCompleteUserData())
+							event.getChannel().sendMessage("Warning! Mapped channel has incomplete data!").queue();
 					} else
 					{
 						LOGGER.warn("Channel {} ({}) in mapping, but IRC mapped channel {} doesn't exist!",
@@ -84,6 +80,34 @@ public class APIListenerDiscord extends ListenerAdapter
 						event.getHook().sendMessage("Couldn't find mapped IRC channel!").queue();
 					}
 				}
+				break;
+			}
+			case "names":
+			{
+				LOGGER.debug("NAMES command issued");
+
+				if (helper.discordToIRCMapping.containsKey(event.getChannelIdLong()))
+				{
+					final String channelName = helper.discordToIRCMapping.get(event.getChannelIdLong());
+					final Optional<Channel> optionalChannel = getIrcClient().getChannel(channelName);
+					if (optionalChannel.isPresent())
+					{
+						LOGGER.debug("Found channel");
+						final Channel channel = optionalChannel.get().getLatest().orElseGet(optionalChannel::get);
+						event.reply("Got nicks: " + channel.getNicknames()).queue();
+						if (!channel.hasCompleteUserData())
+							event.getChannel().sendMessage("Warning! Mapped channel has incomplete data!").queue();
+					} else
+					{
+						LOGGER.warn("Channel {} ({}) in mapping, but IRC mapped channel {} doesn't exist!",
+						             event.getChannel().getName(),
+						             event.getChannelId(),
+						             channelName);
+						event.reply("Couldn't find mapped IRC channel!").queue();
+					}
+				} else
+					event.reply("Channel not mapped!").queue();
+
 				break;
 			}
 			case "version":
@@ -136,10 +160,16 @@ public class APIListenerDiscord extends ListenerAdapter
 
 						final TextChannel channel = option == null ? event.getGuildChannel().asTextChannel() : option.getAsChannel().asTextChannel();
 
+						if (!helper.discordChannels.contains(channel.getIdLong()))
+						{
+							event.getHook().sendMessage("Channel not mapped!").queue();
+							return;
+						}
+
 						final String webhookName = "Relay-" + Integer.toHexString(Main.RANDOM.nextInt());
 						final Webhook webhook = channel.createWebhook(webhookName).setName("IRC Relay").complete();
 
-						final WebhookClientBuilder clientBuilder = new WebhookClientBuilder(webhook.getUrl())
+						final WebhookClientBuilder clientBuilder = WebhookClientBuilder.fromJDA(webhook)
 								.setHttpClient(Main.getJda().getHttpClient()).setAllowedMentions(AllowedMentions.none())
 								.setWait(true);
 
@@ -151,7 +181,19 @@ public class APIListenerDiscord extends ListenerAdapter
 					case "offer":
 					{
 						LOGGER.trace("Was offered existing webhook");
-						// TODO Finish
+
+						if (event.getGuild() == null)
+						{
+							event.getHook().sendMessage("Can only be called in a server!").queue();
+							return;
+						}
+
+						if (!helper.discordChannels.contains(event.getChannelIdLong()))
+						{
+							event.getHook().sendMessage("Channel not mapped!").queue();
+							return;
+						}
+
 						final OptionMapping option = event.getOption("url");
 
 						if (option == null)
@@ -172,12 +214,13 @@ public class APIListenerDiscord extends ListenerAdapter
 								.setHttpClient(Main.getJda().getHttpClient()).setAllowedMentions(AllowedMentions.none())
 								.setWait(true);
 
+						helper.webhookClientCache.put(event.getChannelIdLong(), clientBuilder.buildJDA());
+
 						break;
 					}
 					case "delete":
 					{
 						LOGGER.trace("Attempting to delete/remove webhook");
-						// TODO Finish
 						final OptionMapping option = event.getOption("id");
 
 						if (option == null)
@@ -186,7 +229,7 @@ public class APIListenerDiscord extends ListenerAdapter
 							return;
 						}
 
-						final int id = option.getAsInt();
+						final long id = option.getAsLong();
 
 						final Optional<Webhook> first = event.getGuild()
 						                                     .retrieveWebhooks()
@@ -209,6 +252,10 @@ public class APIListenerDiscord extends ListenerAdapter
 							                                      event.getUser().getName(),
 							                                      event.getUser().getId())).queue();
 						}
+
+						helper.webhookClientCache.values().removeIf(webhookClient -> webhookClient.getId() == id);
+
+						event.getHook().sendMessage("Webhook deleted.").queue();
 
 						break;
 					}
@@ -235,33 +282,17 @@ public class APIListenerDiscord extends ListenerAdapter
 					return;
 				}
 
-				final long discordChanID = event.getChannelIdLong();
-				if (!helper.discordToIRCMapping.containsKey(discordChanID))
-				{
-					LOGGER.trace("Channel {} is not mapped", discordChanID);
-					event.getHook().sendMessage("Channel is not mapped!").setEphemeral(true).queue();
-					return;
-				}
-
-
-				final String channelName = helper.discordToIRCMapping.get(discordChanID);
-				final Optional<Channel> optionalChannel = getIrcClient().getChannel(channelName);
-
-				if (optionalChannel.isEmpty())
-				{
-					LOGGER.warn("Discord channel {} is mapped to {}, but the IRC client couldn't find!", discordChanID, channelName);
-					event.getHook().sendMessage("Couldn't find mapped channel!").queue();
-					return;
-				}
-
-				final Channel ircChannel = optionalChannel.get();
+				final List<User> users = getIrcClient().getChannels()
+				                                         .stream()
+				                                         .flatMap(channel -> channel.getUsers().stream())
+				                                         .toList();
 
 				final String username = option.getAsString();
-				final Optional<User> optionalUser = ircChannel.getUser(username);
+				final Optional<User> optionalUser = users.stream().filter(user -> user.getAccount().isPresent() && user.getAccount().get().equals(username)).findFirst();
 				if (optionalUser.isEmpty())
 				{
-					LOGGER.trace("User {} was not found in channel", username);
-					event.getHook().sendMessage("Unable to locate user in channel.").queue();
+					LOGGER.trace("User {} was not found", username);
+					event.getHook().sendMessage("Unable to locate user in server.").queue();
 					return;
 				}
 
@@ -329,7 +360,6 @@ public class APIListenerDiscord extends ListenerAdapter
 		switch (event.getName())
 		{
 			case "sslinfo":
-			case "whois admin":
 			case "whowas":
 			case "whois":
 			case "link":
@@ -362,11 +392,6 @@ public class APIListenerDiscord extends ListenerAdapter
 	{
 		// TODO
 		LOGGER.debug("Received user context event {}", event.getId());
-		if (event.getUser().getIdLong() != MY_ID)
-		{
-			event.reply("403").queue();
-			return;
-		}
 
 		event.reply(LinkRegistries.getInstance().isRegistered(event.getTarget().getIdLong()) ? "Yes" : "No").setEphemeral(true).queue();
 	}

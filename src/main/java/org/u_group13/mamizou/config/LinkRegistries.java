@@ -1,12 +1,18 @@
 package org.u_group13.mamizou.config;
 
 import club.minnced.discord.webhook.send.WebhookMessageBuilder;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.eclipse.collections.api.factory.primitive.LongObjectMaps;
 import org.eclipse.collections.api.map.primitive.MutableLongObjectMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.u_group13.mamizou.Main;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.Serializable;
+import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -20,8 +26,8 @@ public class LinkRegistries implements Serializable
 	private final MutableLongObjectMap<LinkEntry> discordRegistries;
 	private final Map<String, LinkEntry> ircRegistries;
 
-	private transient final MutableLongObjectMap<LinkEntry> discordRequests;
-	private transient final Map<String, LinkEntry> ircRequests;
+	private final MutableLongObjectMap<LinkEntry> discordRequests;
+	private final Map<String, LinkEntry> ircRequests;
 
 	public LinkRegistries()
 	{
@@ -182,5 +188,56 @@ public class LinkRegistries implements Serializable
 				", discordRequests=" + discordRequests +
 				", ircRequests=" + ircRequests +
 				'}';
+	}
+
+	public static void saveRegistries()
+	{
+		if (Main.config.saveDataPath == null)
+		{
+			LOGGER.warn("Cannot save link registries, path null!");
+			return;
+		}
+
+		if (Files.isDirectory(Main.config.saveDataPath))
+		{
+			LOGGER.error("Cannot save to directory path!");
+			return;
+		}
+
+		try (final OutputStream stream = Files.newOutputStream(Main.config.saveDataPath))
+		{
+			final ObjectMapper mapper = new ObjectMapper();
+
+			mapper.writeValue(stream, getInstance());
+		} catch (IOException e)
+		{
+			LOGGER.error("Caught exception while trying to save!", e);
+		}
+	}
+
+	public static void loadRegistries()
+	{
+
+		if (Main.config.saveDataPath == null)
+		{
+			LOGGER.warn("Cannot read link registries, path null!");
+			return;
+		}
+
+		if (Files.isDirectory(Main.config.saveDataPath))
+		{
+			LOGGER.error("Cannot read from directory path!");
+			return;
+		}
+
+		try (final InputStream stream = Files.newInputStream(Main.config.saveDataPath))
+		{
+			final ObjectMapper mapper = new ObjectMapper();
+
+			instance = mapper.readValue(stream, LinkRegistries.class);
+		} catch (IOException e)
+		{
+			LOGGER.error("Caught exception while trying to read!", e);
+		}
 	}
 }

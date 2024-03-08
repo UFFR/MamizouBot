@@ -67,6 +67,7 @@ public class Config implements Serializable
 	}
 
 	public String discordToken = "I-WAS-NOT-CONFIGURED";
+	// TODO
 	public boolean parallelPingFix = true;
 
 	@JsonDeserialize(using = LongStringMapDeserializer.class)
@@ -77,6 +78,7 @@ public class Config implements Serializable
 	public IRCOptions ircOptions = new IRCOptions();
 
 	public IgnoredUsers ignoredUsers = new IgnoredUsers();
+	public Path saveDataPath;
 
 	static class CharSetDeserializer extends JsonDeserializer<CharSet>
 	{

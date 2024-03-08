@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+// FIXME
 @CommandLine.Command(name = "whois", description = "Get a WHOIS equivalent on a member in the mapped Discord.",
 		mixinStandardHelpOptions = true, version = "1.0.0")
 public class DiscordWHOISCommand extends IRCCommandBase
@@ -37,7 +38,7 @@ public class DiscordWHOISCommand extends IRCCommandBase
 				                                          .filter(m -> m.getEffectiveName().equalsIgnoreCase(member))
 				                                          .findFirst();
 				if (optionalMember.isPresent())
-					getWHOIS(optionalMember.get()).forEach(context.channel()::sendMessage);
+					getWHOIS(optionalMember.get()).forEach(context.sender()::sendMessage);
 				else
 					context.channel().sendMessage("Couldn't find user.");
 

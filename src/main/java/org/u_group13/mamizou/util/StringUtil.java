@@ -1,6 +1,5 @@
 package org.u_group13.mamizou.util;
 
-import org.eclipse.collections.api.factory.Maps;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.kitteh.irc.client.library.element.Channel;
@@ -27,7 +26,7 @@ public class StringUtil
 	public static final String VERSION;
 	static
 	{
-		final String fallback = "0.4.1-SNAPSHOT";
+		final String fallback = "0.5.0-ALPHA";
 		String v;
 		try
 		{
@@ -75,11 +74,12 @@ public class StringUtil
 	@NotNull
 	public static String getWHOIS(@NotNull User user, @NotNull Channel channel)
 	{
+		LOGGER.trace("Building WHOIS string for user {} in channel {}", user, channel);
 		final StringBuilder builder = new StringBuilder(500);
 
 		builder.append("```")
 				.append("Nick: ").append(user.getNick()).append('\n')
-				.append("Hostname: ").append(user.getHost()).append('\n')
+				.append("Hostmask: ").append(user.getHost()).append('\n')
 				.append("Channels: ").append(user.getChannels()).append('\n')
 				.append("Real name: ").append(user.getRealName().orElse(null)).append('\n')
 				.append("User string: ").append(user.getUserString()).append('\n');
@@ -106,9 +106,6 @@ public class StringUtil
 
 		if (user.getServer().isPresent())
 			builder.append("Connected to server: ").append(user.getServer().get()).append('\n');
-
-		if (user.isStale())
-			builder.append("Warning! User cache is stale!");
 
 		builder.append("```");
 

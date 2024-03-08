@@ -1,7 +1,6 @@
 package org.u_group13.mamizou.commands;
 
 import org.jetbrains.annotations.NotNull;
-import org.u_group13.mamizou.Main;
 import org.u_group13.mamizou.config.LinkRegistries;
 import picocli.CommandLine;
 

@@ -25,6 +25,7 @@ public class IRCToDiscord
 			codeMap.put(code.code, code);
 		CODE_MAP = codeMap.asUnmodifiable();
 
+		// TODO Configurable
 		IRC_TO_ANSI_COLOR_MAP[ 0] = 37;
 		IRC_TO_ANSI_COLOR_MAP[ 1] = 30;
 		IRC_TO_ANSI_COLOR_MAP[ 2] = 34;
@@ -63,6 +64,13 @@ public class IRCToDiscord
 					final IRCCode code = CODE_MAP.get(c);
 					if (unmatchedCodes.contains(code))
 					{
+						if (code == IRCCode.COLOR)
+						{
+							final int color = parseColor(source, i);
+							addAnsi(color < 0 ? IRCCode.RESET : code, builder, source, i);
+							if (color >= 0)
+								i += skipColorCode(source, i);
+						}
 						unmatchedCodes.remove(code);
 						for (IRCCode ircCode : unmatchedCodes)
 							addAnsi(ircCode, builder, source, i);
@@ -70,6 +78,8 @@ public class IRCToDiscord
 					{
 						unmatchedCodes.add(code);
 						addAnsi(code, builder, source, i);
+						if (code == IRCCode.COLOR)
+							i += skipColorCode(source, i);
 					}
 				} else
 					builder.append(c);
@@ -87,16 +97,7 @@ public class IRCToDiscord
 				{
 					final IRCCode code = CODE_MAP.get(c);
 
-					switch (code)
-					{
-						case REVERSE_COLOR:
-						case ITALIC: builder.append('*'); break;
-						case BOLD: builder.append("**"); break;
-						case UNDERLINE: builder.append("__"); break;
-						case STRIKETHROUGH:builder.append("~~"); break;
-						case MONOSPACE: builder.append('`'); break;
-						default: break;
-					}
+					addMarkdown(code, builder);
 
 					if (unmatchedCodes.contains(code))
 						unmatchedCodes.remove(code);
@@ -107,34 +108,37 @@ public class IRCToDiscord
 			}
 
 			for (IRCCode code : unmatchedCodes)
-			{
-				switch (code)
-				{
-					case REVERSE_COLOR:
-					case ITALIC: builder.append('*'); break;
-					case BOLD: builder.append("**"); break;
-					case UNDERLINE: builder.append("__"); break;
-					case STRIKETHROUGH: builder.append("~~"); break;
-					case MONOSPACE: builder.append('`'); break;
-					default: break;
-				}
-			}
+				addMarkdown(code, builder);
 
 			return builder.toString();
 		}
 	}
 
+	private static void addMarkdown(@NotNull IRCCode code, @NotNull StringBuilder builder)
+	{
+		switch (code)
+		{
+			case REVERSE_COLOR:
+			case ITALIC: builder.append('*'); break;
+			case BOLD: builder.append("**"); break;
+			case UNDERLINE: builder.append("__"); break;
+			case STRIKETHROUGH: builder.append("~~"); break;
+			case MONOSPACE: builder.append('`'); break;
+			default: break;
+		}
+	}
+
 	private static void addAnsi(@NotNull IRCCode code, @NotNull StringBuilder builder, @NotNull String source, int index)
 	{
+		builder.append(ANSI_ESCAPE);
 		if (code == IRCCode.COLOR)
 		{
 			final int color = parseColor(source, index);
 			if (color < 0)
-				builder.append(ANSI_ESCAPE).append("[39;49m");
+				builder.append("[39;49m");
 			else
 			{
-				builder.append(ANSI_ESCAPE)
-				       .append('[')
+				builder.append('[')
 				       .append(IRC_TO_ANSI_COLOR_MAP[(color >> 4) & 0xf]);
 				if ((color & 1 << 9) != 0)
 					builder.append('m');
@@ -147,7 +151,6 @@ public class IRCToDiscord
 			}
 		} else
 		{
-			builder.append(ANSI_ESCAPE);
 			switch (code)
 			{
 				case ITALIC -> builder.append("[3m");
@@ -178,5 +181,11 @@ public class IRCToDiscord
 		}
 
 		return color;
+	}
+
+	private static int skipColorCode(String source, int offset)
+	{
+		final Matcher matcher = IRC_COLOR_PATTERN.matcher(source);
+		return matcher.find(offset) ? matcher.group().length() : 0;
 	}
 }
