@@ -66,6 +66,7 @@ jar {
     manifest {
         attributes (
             "Build-Version": "${ version }",
+            "Main-Class": "org.u_group13.mamizou.Main"
         )
     }
 }
