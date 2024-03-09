@@ -55,6 +55,7 @@ public class MessageListenerIRC
 				return;
 			}
 
+			final String converted = IRCToDiscord.convert(event.getMessage());
 			if (helper.webhookClientCache.containsKey(discordChanID))
 			{
 				final WebhookClient webhookClient = helper.webhookClientCache.get(discordChanID);
@@ -74,12 +75,14 @@ public class MessageListenerIRC
 					messageBuilder.setUsername(event.getActor().getMessagingName());
 				}
 
-				messageBuilder.setContent(message).setAllowedMentions(AllowedMentions.none());
+				messageBuilder.setContent(converted).setAllowedMentions(AllowedMentions.none());
 				webhookClient.send(messageBuilder.build()).thenAccept(helper::addSentMessage);
 			} else
+			{
 				textChannel.sendMessage(
 						String.format("<**%s**> %s", event.getActor().getMessagingName(),
-						              IRCToDiscord.convert(event.getMessage()))).queue();
+						              converted)).queue();
+			}
 		}
 	}
 

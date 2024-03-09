@@ -167,7 +167,7 @@ public class IRCToDiscord
 		int color = -1;
 
 		final Matcher matcher = IRC_COLOR_PATTERN.matcher(source);
-		if (matcher.find(offset))
+		if (matcher.find(offset) && matcher.start() == (offset + 1))
 		{
 			final String fore = matcher.group(1);
 			final String back = matcher.group(3);
@@ -186,6 +186,6 @@ public class IRCToDiscord
 	private static int skipColorCode(String source, int offset)
 	{
 		final Matcher matcher = IRC_COLOR_PATTERN.matcher(source);
-		return matcher.find(offset) ? matcher.group().length() : 0;
+		return matcher.find(offset) && matcher.start() == (offset + 1) ? matcher.group().length() : 0;
 	}
 }

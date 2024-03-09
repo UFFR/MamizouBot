@@ -8,10 +8,7 @@ import org.jetbrains.annotations.NotNull;
 import org.kitteh.irc.client.library.element.Channel;
 import org.kitteh.irc.client.library.element.User;
 import org.kitteh.irc.client.library.event.channel.*;
-import org.kitteh.irc.client.library.event.user.UserAwayMessageEvent;
-import org.kitteh.irc.client.library.event.user.UserModeEvent;
-import org.kitteh.irc.client.library.event.user.UserNickChangeEvent;
-import org.kitteh.irc.client.library.event.user.UserQuitEvent;
+import org.kitteh.irc.client.library.event.user.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.u_group13.mamizou.util.StringUtil;
@@ -248,13 +245,6 @@ public class GenericListenerIRC
 
 		for (String channelName : event.getActor().getChannels())
 		{
-			final Optional<Channel> optionalChannel = getIrcClient().getChannel(channelName);
-			if (optionalChannel.isEmpty())
-			{
-				LOGGER.warn("Channel {} reported by client, but couldn't be found!", channelName);
-				continue;
-			}
-
 			if (helper.ircToDiscordMapping.containsKey(channelName))
 			{
 				final long discordChanID = helper.ircToDiscordMapping.get(channelName);
@@ -263,6 +253,30 @@ public class GenericListenerIRC
 					textChannel.sendMessage(String.format("**%s** is now known as **%s**", event.getOldUser().getMessagingName(), event.getNewUser().getMessagingName())).queue();
 				else
 					LOGGER.warn("Channel {} is mapped to {}, but JDA couldn't find!", channelName, discordChanID);
+			}
+		}
+	}
+
+	@Handler
+	public void onUserLoginUpdated(@NotNull UserAccountStatusEvent event)
+	{
+		LOGGER.debug("User {} changed status to {}", event.getActor(), event.getAccount());
+
+		for (String channelName : event.getActor().getChannels())
+		{
+			if (helper.ircToDiscordMapping.containsKey(channelName))
+			{
+				final long discordChanID = helper.ircToDiscordMapping.get(channelName);
+				final TextChannel textChannel = getJda().getTextChannelById(discordChanID);
+				if (textChannel != null)
+				{
+					textChannel.sendMessage(
+							event.getAccount().isPresent()
+									? String.format("**%s** has identified as **%s**",
+									                event.getActor().getMessagingName(), event.getAccount().get())
+			                        : String.format("**%s** has unidentified", event.getActor().getMessagingName())).queue();
+				} else
+					LOGGER.warn("IRC channel is mapped, but JDA couldn't find Discord text channel!");
 			}
 		}
 

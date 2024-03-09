@@ -26,7 +26,7 @@ public class StringUtil
 	public static final String VERSION;
 	static
 	{
-		final String fallback = "0.5.0-ALPHA";
+		final String fallback = "0.5.1-ALPHA";
 		String v;
 		try
 		{
@@ -85,7 +85,7 @@ public class StringUtil
 				.append("User string: ").append(user.getUserString()).append('\n');
 
 		final Optional<SortedSet<ChannelUserMode>> userModes = channel.getUserModes(user);
-		if (userModes.isPresent())
+		if (userModes.isPresent() && !userModes.get().isEmpty())
 		{
 			final SortedSet<ChannelUserMode> modes = userModes.get();
 			builder.append("User modes: [").append(userModesToString(modes)).append("]\n");

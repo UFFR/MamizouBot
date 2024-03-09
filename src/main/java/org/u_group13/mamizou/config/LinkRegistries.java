@@ -1,9 +1,15 @@
 package org.u_group13.mamizou.config;
 
 import club.minnced.discord.webhook.send.WebhookMessageBuilder;
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.eclipse.collections.api.factory.primitive.LongLongMaps;
 import org.eclipse.collections.api.factory.primitive.LongObjectMaps;
+import org.eclipse.collections.api.factory.primitive.ObjectLongMaps;
+import org.eclipse.collections.api.map.primitive.MutableLongLongMap;
 import org.eclipse.collections.api.map.primitive.MutableLongObjectMap;
+import org.eclipse.collections.api.map.primitive.MutableObjectLongMap;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.u_group13.mamizou.Main;
@@ -17,22 +23,30 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 public class LinkRegistries implements Serializable
 {
 	private static final Logger LOGGER = LoggerFactory.getLogger(LinkRegistries.class);
 
 	private static LinkRegistries instance;
 
-	private final MutableLongObjectMap<LinkEntry> discordRegistries;
-	private final Map<String, LinkEntry> ircRegistries;
+	private final MutableLongLongMap discordToID;
+	private final MutableObjectLongMap<String> ircToID;
+	private final MutableLongObjectMap<LinkEntry> entryMap;
+//	private final MutableLongObjectMap<LinkEntry> discordRegistries;
+//	private final Map<String, LinkEntry> ircRegistries;
 
 	private final MutableLongObjectMap<LinkEntry> discordRequests;
 	private final Map<String, LinkEntry> ircRequests;
 
 	public LinkRegistries()
 	{
-		discordRegistries = LongObjectMaps.mutable.empty();
-		ircRegistries = new HashMap<>();
+		discordToID = LongLongMaps.mutable.empty();
+		ircToID = ObjectLongMaps.mutable.empty();
+		entryMap = LongObjectMaps.mutable.empty();
+
+//		discordRegistries = LongObjectMaps.mutable.empty();
+//		ircRegistries = new HashMap<>();
 
 		discordRequests = LongObjectMaps.mutable.empty();
 		ircRequests = new HashMap<>();
@@ -54,29 +68,31 @@ public class LinkRegistries implements Serializable
 
 	public boolean isRegistered(long discordID)
 	{
-		return discordRegistries.containsKey(discordID);
+		return discordToID.containsKey(discordID);
 	}
 
 	public boolean isRegistered(String ircAccount)
 	{
-		return ircRegistries.containsKey(ircAccount);
+		return ircToID.containsKey(ircAccount);
 	}
 
 	public synchronized void addEntry(LinkEntry entry)
 	{
-		LOGGER.debug("Adding registry {}", entry);
-		discordRegistries.put(entry.discordID, entry);
-		ircRegistries.put(entry.ircAccount, entry);
+		final long id = Main.RANDOM.nextLong();
+		LOGGER.debug("Adding registry {} with ID {}", entry, id);
+		discordToID.put(entry.discordID, id);
+		ircToID.put(entry.ircAccount, id);
+		entryMap.put(id, entry);
 	}
 
 	public LinkEntry getEntry(long discordID)
 	{
-		return discordRegistries.get(discordID);
+		return entryMap.get(discordToID.get(discordID));
 	}
 
 	public LinkEntry getEntry(String ircAccount)
 	{
-		return ircRegistries.get(ircAccount);
+		return entryMap.get(ircToID.get(ircAccount));
 	}
 
 	public synchronized void removeEntry(long discordID)
@@ -86,9 +102,9 @@ public class LinkRegistries implements Serializable
 
 		LOGGER.debug("Removing registry with Discord ID: {}", discordID);
 
-		final LinkEntry entry = discordRegistries.get(discordID);
-		discordRegistries.remove(discordID);
-		ircRegistries.remove(entry.ircAccount);
+		final LinkEntry entry = entryMap.get(discordToID.get(discordID));
+		discordToID.remove(discordID);
+		ircToID.remove(entry.ircAccount);
 	}
 
 	public synchronized void removeEntry(String ircAccount)
@@ -98,9 +114,9 @@ public class LinkRegistries implements Serializable
 
 		LOGGER.debug("Removing registry with IRC account: {}", ircAccount);
 
-		final LinkEntry entry = ircRegistries.get(ircAccount);
-		discordRegistries.remove(entry.discordID);
-		ircRegistries.remove(ircAccount);
+		final LinkEntry entry = entryMap.get(ircToID.get(ircAccount));
+		discordToID.remove(entry.discordID);
+		ircToID.remove(ircAccount);
 	}
 
 	public synchronized void addRequest(LinkEntry entry, boolean fromDiscord)
@@ -114,12 +130,12 @@ public class LinkRegistries implements Serializable
 
 	public boolean hasRequest(long discordID)
 	{
-		return discordRegistries.containsKey(discordID);
+		return discordRequests.containsKey(discordID);
 	}
 
 	public boolean hasRequest(String ircAccount)
 	{
-		return ircRegistries.containsKey(ircAccount);
+		return ircRequests.containsKey(ircAccount);
 	}
 
 	public synchronized boolean acceptRequest(long discordID)
@@ -168,76 +184,38 @@ public class LinkRegistries implements Serializable
 		if (this == o) return true;
 		if (o == null || getClass() != o.getClass()) return false;
 		final LinkRegistries that = (LinkRegistries) o;
-		return Objects.equals(discordRegistries, that.discordRegistries) && Objects.equals(
-				ircRegistries, that.ircRegistries) && Objects.equals(discordRequests,
-		                                                             that.discordRequests) && Objects.equals(
+		return Objects.equals(discordToID, that.discordToID) && Objects.equals(ircToID,
+		                                                                       that.ircToID) && Objects.equals(
+				entryMap, that.entryMap) && Objects.equals(discordRequests,
+		                                                   that.discordRequests) && Objects.equals(
 				ircRequests, that.ircRequests);
 	}
 
 	@Override
 	public int hashCode()
 	{
-		return Objects.hash(discordRegistries, ircRegistries, discordRequests, ircRequests);
+		return Objects.hash(discordToID, ircToID, entryMap, discordRequests, ircRequests);
 	}
 
 	@Override
 	public String toString()
 	{
-		return "LinkRegistries{" + "discordRegistries=" + discordRegistries +
-				", ircRegistries=" + ircRegistries +
+		return "LinkRegistries{" + "discordToID=" + discordToID +
+				", ircToID=" + ircToID +
+				", entryMap=" + entryMap +
 				", discordRequests=" + discordRequests +
 				", ircRequests=" + ircRequests +
 				'}';
 	}
 
-	public static void saveRegistries()
+	public static void saveRegistries(@NotNull ObjectMapper mapper, @NotNull OutputStream stream) throws IOException
 	{
-		if (Main.config.saveDataPath == null)
-		{
-			LOGGER.warn("Cannot save link registries, path null!");
-			return;
-		}
-
-		if (Files.isDirectory(Main.config.saveDataPath))
-		{
-			LOGGER.error("Cannot save to directory path!");
-			return;
-		}
-
-		try (final OutputStream stream = Files.newOutputStream(Main.config.saveDataPath))
-		{
-			final ObjectMapper mapper = new ObjectMapper();
-
-			mapper.writeValue(stream, getInstance());
-		} catch (IOException e)
-		{
-			LOGGER.error("Caught exception while trying to save!", e);
-		}
+		mapper.writeValue(stream, getInstance());
 	}
 
-	public static void loadRegistries()
+	// TODO
+	public static void loadRegistries(@NotNull ObjectMapper mapper, @NotNull InputStream stream) throws IOException
 	{
-
-		if (Main.config.saveDataPath == null)
-		{
-			LOGGER.warn("Cannot read link registries, path null!");
-			return;
-		}
-
-		if (Files.isDirectory(Main.config.saveDataPath))
-		{
-			LOGGER.error("Cannot read from directory path!");
-			return;
-		}
-
-		try (final InputStream stream = Files.newInputStream(Main.config.saveDataPath))
-		{
-			final ObjectMapper mapper = new ObjectMapper();
-
-			instance = mapper.readValue(stream, LinkRegistries.class);
-		} catch (IOException e)
-		{
-			LOGGER.error("Caught exception while trying to read!", e);
-		}
+		instance = mapper.readValue(stream, LinkRegistries.class);
 	}
 }

@@ -215,6 +215,7 @@ public class APIListenerDiscord extends ListenerAdapter
 								.setWait(true);
 
 						helper.webhookClientCache.put(event.getChannelIdLong(), clientBuilder.buildJDA());
+						event.getHook().sendMessage("Done.").queue();
 
 						break;
 					}
@@ -270,7 +271,7 @@ public class APIListenerDiscord extends ListenerAdapter
 			}
 			case "link":
 			{
-				LOGGER.trace("LINK command issued");
+				LOGGER.debug("LINK command issued");
 				final OptionMapping option = event.getOption("user");
 
 				event.deferReply(true).queue();
@@ -288,15 +289,24 @@ public class APIListenerDiscord extends ListenerAdapter
 				                                         .toList();
 
 				final String username = option.getAsString();
-				final Optional<User> optionalUser = users.stream().filter(user -> user.getAccount().isPresent() && user.getAccount().get().equals(username)).findFirst();
-				if (optionalUser.isEmpty())
+				final List<User> matchingUsers = users.stream()
+				                                     .filter(user -> user.getAccount().isPresent() && user.getAccount().get().equals(username))
+				                                     .collect(Collectors.toList());
+				if (matchingUsers.isEmpty())
 				{
 					LOGGER.trace("User {} was not found", username);
 					event.getHook().sendMessage("Unable to locate user in server.").queue();
 					return;
 				}
 
-				optionalUser.get().sendMessage("User %s (ID: %s) on Discord requested to link, respond with !ACCEPT [ID] to accept, !REJECT [ID] to reject.".formatted(event.getUser().getEffectiveName(), event.getUser().getId()));
+				LOGGER.debug("User {} was found in: {}", username, matchingUsers);
+
+				for (User matchingUser : matchingUsers)
+				{
+					matchingUser.sendMessage(
+							"User %s (ID: %s) on Discord requested to link, respond with !ACCEPT [ID] to accept, !REJECT [ID] to reject.".formatted(
+									event.getUser().getEffectiveName(), event.getUser().getId()));
+				}
 
 				linkRegistries.addRequest(new LinkEntry(username, userID), true);
 

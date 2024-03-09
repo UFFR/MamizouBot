@@ -12,7 +12,7 @@ import java.util.Optional;
 
 // FIXME
 @CommandLine.Command(name = "whois", description = "Get a WHOIS equivalent on a member in the mapped Discord.",
-		mixinStandardHelpOptions = true, version = "1.0.0")
+		mixinStandardHelpOptions = true, version = "1.1.0")
 public class DiscordWHOISCommand extends IRCCommandBase
 {
 	@CommandLine.Parameters(index = "0")
@@ -31,23 +31,31 @@ public class DiscordWHOISCommand extends IRCCommandBase
 			context.channel().sendMessage("Looking for user \"" + member + "\"...");
 			final long chanID = Main.helper.ircToDiscordMapping.get(context.channel().getName());
 			final TextChannel textChannel = Main.getJda().getTextChannelById(chanID);
-			if (textChannel != null)
-			{
-				final Optional<Member> optionalMember = textChannel.getMembers()
-				                                          .stream()
-				                                          .filter(m -> m.getEffectiveName().equalsIgnoreCase(member))
-				                                          .findFirst();
-				if (optionalMember.isPresent())
-					getWHOIS(optionalMember.get()).forEach(context.sender()::sendMessage);
-				else
-					context.channel().sendMessage("Couldn't find user.");
 
-				return 0;
+			if (textChannel == null)
+			{
+				context.channel().sendMessage("Channel is mapped but couldn't be found!");
+				return 11;
+			}
+
+			final Optional<Member> optionalMember = textChannel.getMembers()
+			                                          .stream()
+			                                          .filter(m -> m.getEffectiveName().equalsIgnoreCase(member))
+			                                          .findFirst();
+			if (optionalMember.isPresent())
+			{
+				context.channel().sendMessage("Found user! Check private messages.");
+				context.sender().sendMessage("Begin WHOIS");
+				getWHOIS(optionalMember.get()).forEach(context.sender()::sendMessage);
+				context.sender().sendMessage("End WHOIS");
 			} else
-				context.channel().sendMessage("Channel not mapped!");
+				context.channel().sendMessage("Couldn't find user.");
+
+			return 0;
 		}
 
-		return 1;
+		context.channel().sendMessage("Channel is not mapped!");
+		return 10;
 	}
 
 	@NotNull
@@ -57,7 +65,9 @@ public class DiscordWHOISCommand extends IRCCommandBase
 
 		list.add("Nickname = " + member.getNickname());
 		list.add("Username = " + member.getUser().getName());
+		list.add("Avatar URL = " + member.getEffectiveAvatarUrl());
 		list.add("Activities = " + member.getActivities());
+		list.add("Server join date = " + member.getTimeJoined());
 		list.add("User ID = " + member.getId());
 		list.add("Guild = " + member.getGuild().getName());
 		list.add("Guild ID = " + member.getGuild().getId());

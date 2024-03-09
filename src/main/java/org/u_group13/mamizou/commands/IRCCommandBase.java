@@ -5,6 +5,8 @@ import org.kitteh.irc.client.library.element.Channel;
 import org.kitteh.irc.client.library.element.User;
 import org.kitteh.irc.client.library.event.channel.ChannelMessageEvent;
 import org.kitteh.irc.client.library.event.user.PrivateMessageEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.u_group13.mamizou.util.StringUtil;
 import picocli.CommandLine;
 
@@ -18,6 +20,7 @@ import java.util.function.Function;
 
 public abstract class IRCCommandBase implements Callable<Integer>
 {
+	private static final Logger LOGGER = LoggerFactory.getLogger(IRCCommandBase.class);
 	public static final Map<String, Function<CommandContext, IRCCommandBase>> COMMAND_MAP = new HashMap<>();
 
 	public abstract static class MessageSource
@@ -86,8 +89,9 @@ public abstract class IRCCommandBase implements Callable<Integer>
 		tryExecute(event.getMessage(), event.getActor(), new ChannelMessageSource(event.getChannel()));
 	}
 
-	public static void tryExecute(String rawCommand, User sender, MessageSource source)
+	public static void tryExecute(@NotNull String rawCommand, @NotNull User sender, @NotNull MessageSource source)
 	{
+		LOGGER.debug("Got possible command from {} in {}", sender, source.getName());
 		final int result;
 		final String[] commandAndArgs = StringUtil.splitStringArray(rawCommand);
 
@@ -96,6 +100,7 @@ public abstract class IRCCommandBase implements Callable<Integer>
 
 		if (COMMAND_MAP.containsKey(command))
 		{
+			LOGGER.trace("Got command {}", command);
 			final String[] args;
 
 			args = commandAndArgs.length > 1 ? Arrays.copyOfRange(commandAndArgs, 1, commandAndArgs.length) : new String[0];
@@ -110,6 +115,7 @@ public abstract class IRCCommandBase implements Callable<Integer>
 
 		if (result == -1)
 		{
+			LOGGER.trace("Was not a command");
 			source.sendMessage("Unknown command");
 			return;
 		}
@@ -123,7 +129,12 @@ public abstract class IRCCommandBase implements Callable<Integer>
 			return;
 
 		sender.sendMessage("Begin command dump:");
-		sender.sendMultiLineMessage(output);
+
+		if (output.indexOf('\n') >= 0)
+			for (String split : output.split("\n"))
+				sender.sendMultiLineMessage(split);
+		else
+			sender.sendMultiLineMessage(output);
 		sender.sendMessage("End command dump");
 	}
 }

@@ -4,12 +4,13 @@ import org.jetbrains.annotations.NotNull;
 import org.u_group13.mamizou.config.LinkRegistries;
 import picocli.CommandLine;
 
-@CommandLine.Command(name = "reject", description = "Reject a single or all link requests", version = "1.0.0")
+@CommandLine.Command(name = "reject", description = "Reject a single or all link requests", version = "1.0.2",
+	mixinStandardHelpOptions = true)
 public class RejectLinkCommand extends IRCCommandBase
 {
 	@CommandLine.Parameters(index = "0", description = "Discord ID of the requester to reject", arity = "0..*")
 	private long[] discordIDs;
-	@CommandLine.Option(names = "-a,--all", description = "Reject all instead of a single one, ignores parameter")
+	@CommandLine.Option(names = {"-a", "--all"}, description = "Reject all instead of a single one, ignores parameter")
 	private boolean all = false;
 
 	public RejectLinkCommand(@NotNull CommandContext context)

@@ -1,6 +1,7 @@
 package org.u_group13.mamizou.config;
 
 import club.minnced.discord.webhook.send.WebhookMessageBuilder;
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.User;
@@ -14,7 +15,9 @@ import org.slf4j.LoggerFactory;
 import org.u_group13.mamizou.Main;
 
 import java.io.Serializable;
+import java.util.Objects;
 
+@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 public class LinkEntry implements Serializable
 {
 	private static final Logger LOGGER = LoggerFactory.getLogger(LinkEntry.class);
@@ -96,4 +99,30 @@ public class LinkEntry implements Serializable
 		user.getMutualGuilds().forEach(guild -> guild.retrieveMemberById(discordID).queue(this::offerCache));
 	}
 
+	@Override
+	public boolean equals(Object o)
+	{
+		if (this == o) return true;
+		if (o == null || getClass() != o.getClass()) return false;
+		final LinkEntry entry = (LinkEntry) o;
+		return discordID == entry.discordID && Objects.equals(ircAccount,
+		                                                      entry.ircAccount) && Objects.equals(
+				cacheMappings, entry.cacheMappings) && Objects.equals(defaultCache, entry.defaultCache);
+	}
+
+	@Override
+	public int hashCode()
+	{
+		return Objects.hash(ircAccount, discordID, cacheMappings, defaultCache);
+	}
+
+	@Override
+	public String toString()
+	{
+		return "LinkEntry{" + "ircAccount='" + ircAccount + '\'' +
+				", discordID=" + discordID +
+				", cacheMappings=" + cacheMappings +
+				", defaultCache=" + defaultCache +
+				'}';
+	}
 }

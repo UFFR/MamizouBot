@@ -4,7 +4,8 @@ import org.jetbrains.annotations.NotNull;
 import org.u_group13.mamizou.config.LinkRegistries;
 import picocli.CommandLine;
 
-@CommandLine.Command(name = "accept", description = "Accept a link request from Discord", version = "1.0.0")
+@CommandLine.Command(name = "accept", description = "Accept a link request from Discord", version = "1.0.0",
+	mixinStandardHelpOptions = true)
 public class AcceptLinkCommand extends IRCCommandBase
 {
 	@CommandLine.Parameters(index = "0", description = "Discord user ID of the requester to link with")

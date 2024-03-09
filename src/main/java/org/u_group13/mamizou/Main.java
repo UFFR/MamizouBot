@@ -39,6 +39,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
+import java.util.Arrays;
 import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
@@ -122,6 +123,9 @@ public class Main implements Callable<Integer>
 		                .addEventListeners(api, generic, message, new UserListenerDiscord())
 		                .setActivity(Activity.watching("IRC Channels"))
 		                .build();
+
+		if (apiKey != null)
+			Arrays.fill(apiKey, '\0');
 
 		LOGGER.info("Waiting for connection...");
 		jda.awaitReady();

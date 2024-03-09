@@ -46,7 +46,14 @@ public class MessageListenerDiscord extends ListenerAdapter
 				final String name = event.getAuthor().getEffectiveName();
 				final String coloredNick = IRCCode.getColoredNick(name);
 				if (!messageContent.isEmpty())
-					ircChannel.sendMultiLineMessage(coloredNick + ' ' + messageContent);
+				{
+
+					if (messageContent.indexOf('\n') >= 0)
+						for (String split : messageContent.split("\n"))
+							ircChannel.sendMultiLineMessage(coloredNick + ' ' + split);
+					else
+						ircChannel.sendMultiLineMessage(coloredNick + ' ' + messageContent);
+				}
 				for (Message.Attachment attachment : event.getMessage().getAttachments())
 					ircChannel.sendMessage(coloredNick + ' ' + attachment.getUrl());
 			} else

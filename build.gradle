@@ -15,10 +15,10 @@ plugins {
 def getVersionName = {
     def stdout = new ByteArrayOutputStream()
     exec {
-        commandLine("build-hasher", "-p", "src/")
+        commandLine("build-hasher", "src/")
         standardOutput = stdout
     }
-    return "0.5.0-ALPHA" + '-' + stdout.toString().trim()
+    return "0.5.1-ALPHA" + '-' + stdout.toString().trim()
 }
 
 group = 'org.u_group13'
@@ -51,6 +51,9 @@ dependencies {
     // https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-databind
     implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.16.0'
 
+    // https://mvnrepository.com/artifact/com.fasterxml.jackson.datatype/jackson-datatype-eclipse-collections
+    implementation group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-eclipse-collections', version: '2.16.1'
+
     implementation 'org.eclipse.collections:eclipse-collections-api:11.1.0'
     implementation 'org.eclipse.collections:eclipse-collections:11.1.0'
 }
@@ -63,7 +66,6 @@ jar {
     manifest {
         attributes (
             "Build-Version": "${ version }",
-            "Main-Class": "org.u_group13.mamizou.Main"
         )
     }
 }
