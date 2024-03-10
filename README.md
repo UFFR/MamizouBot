@@ -1,12 +1,14 @@
 # MamizouBot
 
-A Java-based Discord/IRC bot for relaying messages between linked channels.
+A Java-based (Java 21) Discord/IRC bot for relaying messages between linked channels.
 
-Can be in many Discord servers, however, can only be in one IRC server.
+Can be in many Discord servers, however, can only be in one IRC server, so it is suited for self-deployment, rather than using a single instance.
 
 It was made to be a replacement for [discord-irc](https://github.com/reactiflux/discord-irc), which I formerly used, but using an up-to-date API (JDA) and with more features for the convenience of its users. More features are planned to be added.
 
 ***Be advised, the bot is still in an alpha stage and not intended for major use yet!***
+
+Contributions are always welcome, but I may not work on it in a while.
 
 ## Building
 
@@ -31,7 +33,7 @@ The configuration file is in JSON, similar to discord-irc, but the structure has
         "port":         6697, // TLS is always recommended.
         "nickColors":   true, // Doesn't do anything yet, but will toggle whether or not on IRC-side should names be given colors.
         "sasl":         true, // If SASL should be used for authentication, recommended.
-        "statusNotices: true, // Doesn't do anything yet, but will toggle sending updates on non-message events.
+        "statusNotices": true, // Doesn't do anything yet, but will toggle sending updates on non-message events.
         "password":     "I-WAS-NOT-CONFIGURED", // IRC account password, for PLAIN or NickServ based authentication.
         "secure":       true, // Explicit TLS, recommended.
         "authType":     "ECDSA", // Supports "NICKSERV" for NickServ password authentication, "PLAIN" for SASL password authentication, "EXTERNAL" for client TLS authentication with SASL, and "ECDSA" for SASL authentication with the ECDSA-NIST256p-CHALLENGE mechanism. P-256 keys must be in unencrypted, PKCS8 format, if yours isn't, you can convert it with OpenSSL.

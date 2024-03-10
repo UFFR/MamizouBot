@@ -12,6 +12,7 @@ import org.kitteh.irc.client.library.event.user.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.u_group13.mamizou.util.StringUtil;
+import org.u_group13.mamizou.util.converter.IRCToDiscord;
 
 import java.util.Optional;
 
@@ -208,7 +209,7 @@ public class GenericListenerIRC
 			if (textChannel != null)
 			{
 				textChannel.sendMessage(
-						String.format("**%s** sent notice: %s", event.getActor().getMessagingName(),
+						String.format("**%s** sent notice: %s", IRCToDiscord.convert(event.getActor().getMessagingName()),
 						              event.getMessage())).queue();
 			} else
 				LOGGER.warn("IRC channel {} is mapped to {}, but JDA couldn't find!", event.getChannel(), discordChanID);
