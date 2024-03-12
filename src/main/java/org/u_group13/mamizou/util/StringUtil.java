@@ -26,7 +26,7 @@ public class StringUtil
 	public static final String VERSION;
 	static
 	{
-		final String fallback = "0.5.2-ALPHA";
+		final String fallback = "0.5.3-ALPHA";
 		String v;
 		try
 		{
@@ -123,7 +123,10 @@ public class StringUtil
 		for (ModeStatus<? extends Mode> mode : modes)
 		{
 			(mode.getAction() == ModeStatus.Action.ADD ? added : removed).append(mode.getMode().getChar());
-			mode.getParameter().ifPresent(parameters::add);
+			if (mode.getMode().getChar() == 'k')
+				parameters.add("<key>");
+			else
+				mode.getParameter().ifPresent(parameters::add);
 		}
 
 		if (!added.isEmpty())

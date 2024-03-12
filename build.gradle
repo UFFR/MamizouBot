@@ -18,7 +18,7 @@ def getVersionName = {
         commandLine("build-hasher", "src/")
         standardOutput = stdout
     }
-    return "0.5.2-ALPHA" + '-' + stdout.toString().trim()
+    return "0.5.3-ALPHA" + '-' + stdout.toString().trim()
 }
 
 group = 'org.u_group13'
