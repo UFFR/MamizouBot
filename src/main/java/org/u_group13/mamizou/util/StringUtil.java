@@ -26,7 +26,7 @@ public class StringUtil
 	public static final String VERSION;
 	static
 	{
-		final String fallback = "0.5.3-ALPHA";
+		final String fallback = "0.5.4-SNAPSHOT";
 		String v;
 		try
 		{

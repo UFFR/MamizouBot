@@ -38,7 +38,7 @@ public class ConfigSaver implements Runnable
 
 		try
 		{
-			Files.createDirectories(Main.config.saveDataPath);
+			Files.createDirectories(Main.config.saveDataPath.getParent());
 
 			try (final OutputStream stream = Files.newOutputStream(Main.config.saveDataPath))
 			{

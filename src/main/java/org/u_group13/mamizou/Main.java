@@ -1,6 +1,7 @@
 package org.u_group13.mamizou;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.eclipsecollections.EclipseCollectionsModule;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Activity;
@@ -20,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.u_group13.mamizou.commands.*;
 import org.u_group13.mamizou.config.Config;
+import org.u_group13.mamizou.config.LinkRegistries;
 import org.u_group13.mamizou.listeners.discord.APIListenerDiscord;
 import org.u_group13.mamizou.listeners.discord.GenericListenerDiscord;
 import org.u_group13.mamizou.listeners.discord.MessageListenerDiscord;
@@ -189,6 +191,8 @@ public class Main implements Callable<Integer>
 		LOGGER.info("Using capabilities: {}", ircClient.getCapabilityManager().getCapabilities());
 		LOGGER.info(ircClient.getServerInfo().hasWhoXSupport() ? "Has WHOX support" : "Does not have WHOX support");
 
+		tryReadSaveData();
+
 		return 0;
 	}
 
@@ -335,6 +339,38 @@ public class Main implements Callable<Integer>
 		};
 	}
 
+	private static void tryReadSaveData()
+	{
+		LOGGER.info("Trying to read saved data...");
+		if (config.saveDataPath == null)
+		{
+			LOGGER.warn("Cannot read data, path is null!");
+			return;
+		}
+
+		if (Files.isDirectory(config.saveDataPath))
+		{
+			LOGGER.warn("Cannot read data, path is directory!");
+			return;
+		}
+
+		if (Files.notExists(config.saveDataPath))
+		{
+			LOGGER.info("Save data path doesn't exist, skipping...");
+			return;
+		}
+
+		try (final InputStream stream = Files.newInputStream(config.saveDataPath))
+		{
+			final ObjectMapper mapper = new ObjectMapper().registerModule(new EclipseCollectionsModule());
+
+			LinkRegistries.loadRegistries(mapper, stream);
+		} catch (IOException e)
+		{
+			LOGGER.error("Caught exception trying to read save data!", e);
+		}
+	}
+
 	private static void handleSignal(Signal signal)
 	{
 		LOGGER.info("Received {}", signal);
@@ -344,6 +380,7 @@ public class Main implements Callable<Integer>
 		switch (name)
 		{
 			case "HUP":
+				// TODO Better config reloading
 				LOGGER.info("SIGHUP received, reloading configuration...");
 				readConfig(getInstance().getConfigPath());
 				break;
