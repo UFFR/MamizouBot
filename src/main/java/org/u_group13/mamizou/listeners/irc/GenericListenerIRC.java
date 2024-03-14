@@ -209,8 +209,8 @@ public class GenericListenerIRC
 			if (textChannel != null)
 			{
 				textChannel.sendMessage(
-						String.format("**%s** sent notice: %s", IRCToDiscord.convert(event.getActor().getMessagingName()),
-						              event.getMessage())).queue();
+						String.format("**%s** sent notice: %s", event.getActor().getMessagingName(),
+						              IRCToDiscord.convert(event.getMessage()))).queue();
 			} else
 				LOGGER.warn("IRC channel {} is mapped to {}, but JDA couldn't find!", event.getChannel(), discordChanID);
 		}

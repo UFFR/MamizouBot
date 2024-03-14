@@ -52,8 +52,9 @@ public class APIListenerDiscord extends ListenerAdapter
 				{
 					final String username = Objects.requireNonNull(event.getOption("user")).getAsString();
 					LOGGER.trace("Querying user {}", username);
+					final long discordChanID = event.getChannelIdLong();
 					final Optional<Channel> optionalChannel = getIrcClient().getChannel(
-							config.channelMapping.get(event.getChannelIdLong()));
+							helper.discordToIRCMapping.get(discordChanID));
 					if (optionalChannel.isPresent())
 					{
 						getIrcClient().commands().whois().server(config.ircOptions.server).target(username).execute();
@@ -76,7 +77,7 @@ public class APIListenerDiscord extends ListenerAdapter
 						LOGGER.warn("Channel {} ({}) in mapping, but IRC mapped channel {} doesn't exist!",
 						            event.getChannel().getName(),
 						            event.getChannelId(),
-						            config.channelMapping.containsKey(event.getChannelIdLong()));
+						            helper.discordToIRCMapping.get(discordChanID));
 						event.getHook().sendMessage("Couldn't find mapped IRC channel!").queue();
 					}
 				}
@@ -112,10 +113,11 @@ public class APIListenerDiscord extends ListenerAdapter
 			}
 			case "version":
 			{
-				LOGGER.trace("VERSION command issued");
+				LOGGER.debug("VERSION command issued");
 				event.replyEmbeds(new EmbedBuilder()
 						                  .setTitle("MamizouBot v" + StringUtil.VERSION + " by UFFR")
 						                  .appendDescription(StringUtil.getCreditsString())
+						                  .setUrl("https://github.com/UFFR/MamizouBot")
 						                  .build()).queue();
 				break;
 			}
@@ -136,7 +138,7 @@ public class APIListenerDiscord extends ListenerAdapter
 			}
 			case "webhook":
 			{
-				LOGGER.trace("WEBHOOK command issued");
+				LOGGER.debug("WEBHOOK command issued");
 				if (event.getSubcommandName() == null)
 				{
 					LOGGER.trace("No subcommand provided");
@@ -155,7 +157,7 @@ public class APIListenerDiscord extends ListenerAdapter
 				{
 					case "create":
 					{
-						LOGGER.trace("Attempting to create new webhook...");
+						LOGGER.debug("Attempting to create new webhook...");
 						final OptionMapping option = event.getOption("channel");
 
 						final TextChannel channel = option == null ? event.getGuildChannel().asTextChannel() : option.getAsChannel().asTextChannel();
@@ -180,7 +182,7 @@ public class APIListenerDiscord extends ListenerAdapter
 					}
 					case "offer":
 					{
-						LOGGER.trace("Was offered existing webhook");
+						LOGGER.debug("Was offered existing webhook");
 
 						if (event.getGuild() == null)
 						{
@@ -221,7 +223,7 @@ public class APIListenerDiscord extends ListenerAdapter
 					}
 					case "delete":
 					{
-						LOGGER.trace("Attempting to delete/remove webhook");
+						LOGGER.debug("Attempting to delete/remove webhook");
 						final OptionMapping option = event.getOption("id");
 
 						if (option == null)
@@ -285,6 +287,7 @@ public class APIListenerDiscord extends ListenerAdapter
 
 				final List<User> users = getIrcClient().getChannels()
 				                                         .stream()
+														 .map(channel -> channel.getLatest().orElse(channel))
 				                                         .flatMap(channel -> channel.getUsers().stream())
 				                                         .toList();
 
@@ -294,19 +297,17 @@ public class APIListenerDiscord extends ListenerAdapter
 				                                     .collect(Collectors.toList());
 				if (matchingUsers.isEmpty())
 				{
-					LOGGER.trace("User {} was not found", username);
+					LOGGER.debug("User {} was not found", username);
 					event.getHook().sendMessage("Unable to locate user in server.").queue();
 					return;
 				}
 
 				LOGGER.debug("User {} was found in: {}", username, matchingUsers);
 
+				final String message = "User %s (ID: %s) on Discord requested to link, respond with !ACCEPT [ID] to accept, !REJECT [ID] to reject.".formatted(
+						event.getUser().getEffectiveName(), event.getUser().getId());
 				for (User matchingUser : matchingUsers)
-				{
-					matchingUser.sendMessage(
-							"User %s (ID: %s) on Discord requested to link, respond with !ACCEPT [ID] to accept, !REJECT [ID] to reject.".formatted(
-									event.getUser().getEffectiveName(), event.getUser().getId()));
-				}
+					matchingUser.sendMessage(message);
 
 				linkRegistries.addRequest(new LinkEntry(username, userID), true);
 
@@ -374,10 +375,10 @@ public class APIListenerDiscord extends ListenerAdapter
 			case "whois":
 			case "link":
 			{
-				final long chanID = event.getChannelIdLong();
-				if (config.channelMapping.containsKey(chanID))
+				final long discordChanID = event.getChannelIdLong();
+				if (helper.discordToIRCMapping.containsKey(discordChanID))
 				{
-					final Optional<Channel> optionalChannel = Main.getIrcClient().getChannel(config.channelMapping.get(chanID));
+					final Optional<Channel> optionalChannel = Main.getIrcClient().getChannel(helper.discordToIRCMapping.get(discordChanID));
 					if (optionalChannel.isPresent())
 					{
 						final Channel channel = optionalChannel.get();
@@ -388,7 +389,7 @@ public class APIListenerDiscord extends ListenerAdapter
 						LOGGER.warn("Channel {} ({}) in mapping, but IRC mapped channel {} doesn't exist!",
 						            event.getChannel().getName(),
 						            event.getChannelId(),
-						            config.channelMapping.containsKey(event.getChannelIdLong()));
+						            helper.discordToIRCMapping.get(discordChanID));
 					}
 				}
 				break;
