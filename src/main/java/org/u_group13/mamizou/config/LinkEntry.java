@@ -43,6 +43,13 @@ public class LinkEntry implements Serializable
 		defaultCache = Tuples.pair(user.getEffectiveName(), user.getEffectiveAvatarUrl());
 	}
 
+	public LinkEntry()
+	{
+		ircAccount = "_NOT CONFIGURED_";
+		discordID = 0;
+		cacheMappings = LongObjectMaps.mutable.empty();
+	}
+
 	public synchronized void offerCache(@NotNull Member member)
 	{
 		LOGGER.trace("Was offered cache for {}", member);
