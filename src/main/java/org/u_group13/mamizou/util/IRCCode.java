@@ -24,8 +24,7 @@ public enum IRCCode
 	@Contract(pure = true)
 	public static String getColoredNick(@NotNull String nick)
 	{
-//		final int code = ((nick.hashCode() + 2) % 16) & 0x0f;
-		final int code = Integer.remainderUnsigned(nick.hashCode() + 2, 16);
+		final int code = Integer.remainderUnsigned(nick.hashCode(), 14) + 2;
 		return String.format("<%s%s%s%s>", COLOR.code, code, nick, COLOR.code);
 	}
 

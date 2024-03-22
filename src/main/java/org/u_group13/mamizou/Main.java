@@ -390,6 +390,7 @@ public class Main implements Callable<Integer>
 				jda.shutdown();
 				ircClient.shutdown("SIGTERM/SIGINT received, shutting down gracefully...");
 				ConfigSaver.getInstance().run();
+				System.exit(0);
 				break;
 			case "USR1":
 				LOGGER.info("SIGUSR1 received, attempting to save data...");
